@@ -1,0 +1,151 @@
+-- player-service 独立库初始化脚本（与 JPA 实体 validate 对齐）
+-- 建议在 MySQL 中先创建数据库：CREATE DATABASE IF NOT EXISTS player_db DEFAULT CHARSET utf8mb4;
+
+CREATE TABLE IF NOT EXISTS account (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  account_name VARCHAR(64) NOT NULL UNIQUE,
+  password VARCHAR(128) NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_time DATETIME NULL
+);
+
+CREATE TABLE IF NOT EXISTS player (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  account_id BIGINT NOT NULL,
+  name VARCHAR(64) NOT NULL UNIQUE,
+  level INT NOT NULL DEFAULT 1,
+  vip_right INT NOT NULL DEFAULT 0,
+  gold BIGINT NOT NULL DEFAULT 0,
+  exp BIGINT NOT NULL DEFAULT 0,
+  KEY idx_player_account(account_id)
+);
+
+CREATE TABLE IF NOT EXISTS admin_user (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(64) NOT NULL UNIQUE,
+  password VARCHAR(128) NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  code VARCHAR(64) NOT NULL UNIQUE,
+  name VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  code VARCHAR(128) NOT NULL UNIQUE,
+  description VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_user_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_role_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_id BIGINT NOT NULL,
+  permission_id BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS item_config (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  kind INT NOT NULL,
+  stack_limit INT NOT NULL DEFAULT 1,
+  level_required INT NOT NULL DEFAULT 0,
+  description VARCHAR(255) DEFAULT NULL,
+  price INT NOT NULL DEFAULT 0,
+  sell_price INT NOT NULL DEFAULT 0,
+  effect_params VARCHAR(255) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS player_bag_item (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  player_id BIGINT NOT NULL,
+  item_config_id INT NOT NULL,
+  count INT NOT NULL DEFAULT 1,
+  bind INT NOT NULL DEFAULT 0,
+  slot_index INT NOT NULL DEFAULT 0,
+  KEY idx_player_slot (player_id, slot_index)
+);
+
+CREATE TABLE IF NOT EXISTS skill_config (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  effect VARCHAR(255) DEFAULT NULL,
+  need_level INT NOT NULL DEFAULT 0,
+  cooldown INT NOT NULL DEFAULT 0,
+  mana_cost INT NOT NULL DEFAULT 0,
+  cast_time DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  skill_type INT NOT NULL DEFAULT 1,
+  target_type INT NOT NULL DEFAULT 1,
+  skill_range INT NOT NULL DEFAULT 0,
+  shape INT NOT NULL DEFAULT 1,
+  shape_params JSON DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS player_skill (
+  player_id BIGINT NOT NULL,
+  skill_id INT NOT NULL,
+  learn_time DATETIME(6) NOT NULL,
+  PRIMARY KEY (player_id, skill_id)
+);
+
+CREATE TABLE IF NOT EXISTS buff_config (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  duration INT NOT NULL DEFAULT -1,
+  periodic_interval INT DEFAULT NULL,
+  stack_limit INT NOT NULL DEFAULT 1,
+  effect_type INT NOT NULL,
+  effect_params VARCHAR(255) DEFAULT NULL,
+  description VARCHAR(255) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS map_config (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  width INT NOT NULL,
+  height INT NOT NULL,
+  default_lines INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS monster_config (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  model_id INT NOT NULL,
+  level INT NOT NULL DEFAULT 1,
+  hp_max INT NOT NULL DEFAULT 100,
+  mp_max INT NOT NULL DEFAULT 0,
+  attack INT NOT NULL DEFAULT 10,
+  defense INT NOT NULL DEFAULT 5,
+  exp_reward INT NOT NULL DEFAULT 0,
+  description VARCHAR(255) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS activity (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  type INT NOT NULL,
+  opened TINYINT(1) NOT NULL DEFAULT 0,
+  data TEXT DEFAULT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_type (type)
+);
+
+CREATE TABLE IF NOT EXISTS chat_message_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  sender_id BIGINT NOT NULL,
+  channel INT NOT NULL,
+  target_id BIGINT NULL,
+  msg_type INT NOT NULL,
+  content VARCHAR(512) NOT NULL,
+  server_ts BIGINT NOT NULL,
+  KEY idx_chat_sender (sender_id),
+  KEY idx_chat_ts (server_ts)
+);

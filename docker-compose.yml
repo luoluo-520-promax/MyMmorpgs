@@ -1,0 +1,22 @@
+# 本地开发依赖：Redis（必需）、Nacos（可选，微服务注册/配置中心）
+# 启动：docker compose up -d
+# 仅 Redis：docker compose up -d redis
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: mmorpg-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  nacos:
+    image: nacos/nacos-server:v2.4.2
+    container_name: mmorpg-nacos
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    restart: unless-stopped

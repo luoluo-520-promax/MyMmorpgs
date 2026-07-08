@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="mmorpg-gateway-unit">
+    <test name="gateway-unit">
+        <packages>
+            <package name="cn.itcast.demo.mymmorpg.gateway"/>
+            <package name="cn.itcast.demo.mymmorpg.gateway.config"/>
+        </packages>
+    </test>
+</suite>

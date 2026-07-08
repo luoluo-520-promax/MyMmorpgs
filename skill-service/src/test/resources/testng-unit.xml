@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="skill-service-unit">
+    <test name="skill-unit">
+        <packages>
+            <package name="cn.itcast.demo.mymmorpg.config"/>
+            <package name="cn.itcast.demo.mymmorpg.support"/>
+        </packages>
+    </test>
+</suite>

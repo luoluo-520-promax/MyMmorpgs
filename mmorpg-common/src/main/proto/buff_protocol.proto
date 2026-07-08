@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package mmorpg.buff;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "BuffProtocolProto";
+
+// 与接口文档 BuffInfo 一致（为避免与 battle 包内 BuffInfo 冲突，消息名为 BuffRuntimeInfo）
+
+message BuffRuntimeInfo {
+  uint32 buff_id = 1;
+  string buff_name = 2;
+  int64 remaining_time = 3;
+  uint32 stack_count = 4;
+  uint32 effect_type = 5;
+  string effect_params = 6;
+  string description = 7;
+}
+
+// ---------- 401 / 402 获取实体 Buff 列表 ----------
+
+message GetEntityBuffsCsReq {
+  uint64 entity_id = 1;
+}
+
+message GetEntityBuffsScRsp {
+  int32 retcode = 1;
+  uint64 entity_id = 2;
+  repeated BuffRuntimeInfo buffs = 3;
+}
+
+// ---------- 403 Buff 添加通知 ----------
+
+message BuffAddScNotify {
+  uint64 entity_id = 1;
+  BuffRuntimeInfo buff_info = 2;
+}
+
+// ---------- 404 Buff 移除通知 ----------
+
+message BuffRemoveScNotify {
+  uint64 entity_id = 1;
+  uint32 buff_id = 2;
+  uint32 reason = 3;
+}
+
+// ---------- 405 Buff 更新通知 ----------
+
+message BuffUpdateScNotify {
+  uint64 entity_id = 1;
+  uint32 buff_id = 2;
+  optional int64 remaining_time = 3;
+  optional uint32 stack_count = 4;
+}
+
+// ---------- 406 / 407 移除 Buff ----------
+
+message RemoveBuffCsReq {
+  uint64 target_entity_id = 1;
+  uint32 buff_id = 2;
+}
+
+message RemoveBuffScRsp {
+  int32 retcode = 1;
+  uint64 target_entity_id = 2;
+  uint32 buff_id = 3;
+}

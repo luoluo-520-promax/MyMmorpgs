@@ -1,0 +1,14 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!--
+  聚合：各模块「单元测试」套件（供 IDE / TestNG CLI 引用；路径相对于本文件所在目录）。
+  Maven 默认已在各模块使用 testng-unit.xml，一般执行：mvn test
+-->
+<suite name="mmorpg-all-unit">
+    <suite-files>
+        <suite-file path="../mmorpg-common/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../mmorpg-gateway/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../player-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../battle-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../activity-service/src/test/resources/testng-unit.xml"/>
+    </suite-files>
+</suite>

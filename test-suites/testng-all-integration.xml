@@ -1,0 +1,14 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!--
+  聚合：各模块「集成测试」套件。battle-service / player-service 需本机 Docker（Redis 镜像）。
+  Maven：mvn test -Pintegration-tests
+-->
+<suite name="mmorpg-all-integration">
+    <suite-files>
+        <suite-file path="../mmorpg-common/src/test/resources/testng-integration.xml"/>
+        <suite-file path="../mmorpg-gateway/src/test/resources/testng-integration.xml"/>
+        <suite-file path="../player-service/src/test/resources/testng-integration.xml"/>
+        <suite-file path="../battle-service/src/test/resources/testng-integration.xml"/>
+        <suite-file path="../activity-service/src/test/resources/testng-integration.xml"/>
+    </suite-files>
+</suite>

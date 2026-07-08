@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- 战斗服务：集成测试（需本机 Docker，用于启动 Redis 容器） -->
+<suite name="battle-service-integration" parallel="none">
+    <test name="battle-integration">
+        <packages>
+            <package name="cn.itcast.demo.mymmorpg.service.integration"/>
+        </packages>
+    </test>
+</suite>

@@ -1,0 +1,23 @@
+# 文件维护说明
+# - 文件路径: src/main/resources/function.yml
+# - 主要职责: 提供运行时配置项，请保持键命名稳定并与代码绑定关系一致。
+# - 变更建议: 变更默认值前先评估兼容性，避免影响线上实例启动与行为。
+
+functions:
+  list:
+    # 示例：坐骑系统（到 10 级开启）
+    - id: 100
+      openType: 1
+      openMainParam: 10
+      openSubParam: 0
+    # 示例：副本系统（到 15 级开启）
+    - id: 101
+      openType: 1
+      openMainParam: 15
+      openSubParam: 0
+    # 示例：聊天系统（到 5 级开启）
+    - id: 102
+      openType: 1
+      openMainParam: 5
+      openSubParam: 0
+

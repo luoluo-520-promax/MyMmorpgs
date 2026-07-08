@@ -1,0 +1,6 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="mmorpg-common-integration" parallel="none">
+    <test name="common-integration">
+        <!-- integration tests moved to player-service / battle-service -->
+    </test>
+</suite>

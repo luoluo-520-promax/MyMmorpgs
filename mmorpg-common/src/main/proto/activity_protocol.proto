@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+import "battle_protocol.proto";
+
+package mmorpg.activity;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "ActivityProtocolProto";
+
+// ---------- 801 / 802 获取活动列表 ----------
+
+message GetActivityListCsReq {}
+
+message ActivityBriefInfo {
+  uint64 activity_id = 1;
+  uint32 type = 2;
+  string name = 3;
+  uint32 status = 4;
+  uint64 start_time = 5;
+  uint64 end_time = 6;
+  string brief_desc = 7;
+}
+
+message GetActivityListScRsp {
+  int32 retcode = 1;
+  repeated ActivityBriefInfo activities = 2;
+  bool loading = 3;
+}
+
+// ---------- 803 / 804 获取活动详情 ----------
+
+message GetActivityDetailCsReq {
+  uint64 activity_id = 1;
+}
+
+message RewardStatus {
+  uint32 reward_index = 1;
+  bool claimed = 2;
+  bool can_claim = 3;
+}
+
+message GetActivityDetailScRsp {
+  int32 retcode = 1;
+  uint64 activity_id = 2;
+  uint32 type = 3;
+  uint32 status = 4;
+  string detail_data = 5;
+  repeated RewardStatus reward_status = 6;
+  bool loading = 7;
+}
+
+// ---------- 805 / 806 领取活动奖励 ----------
+
+message ClaimActivityRewardCsReq {
+  uint64 activity_id = 1;
+  uint32 reward_index = 2;
+}
+
+message ClaimActivityRewardScRsp {
+  int32 retcode = 1;
+  uint64 activity_id = 2;
+  uint32 reward_index = 3;
+  repeated mmorpg.battle.ItemReward reward_items = 4;
+  uint32 claimed_count = 5;
+}
+
+// ---------- 807 活动状态变更通知 ----------
+
+message ActivityStatusScNotify {
+  uint64 activity_id = 1;
+  uint32 type = 2;
+  uint32 status = 3;
+  uint64 start_time = 4;
+  uint64 end_time = 5;
+}
+
+// ---------- 808 活动异步加载完成通知 ----------
+
+message ActivityDataReadyScNotify {
+  repeated ActivityBriefInfo activities = 1;
+}

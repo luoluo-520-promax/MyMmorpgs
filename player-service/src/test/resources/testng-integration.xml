@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- 需本机 Docker（Redis 容器） -->
+<suite name="player-service-integration" parallel="none">
+    <test name="player-integration">
+        <packages>
+            <package name="cn.itcast.demo.mymmorpg.integration"/>
+        </packages>
+    </test>
+</suite>

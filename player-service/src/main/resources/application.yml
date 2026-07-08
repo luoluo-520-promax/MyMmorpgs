@@ -1,0 +1,174 @@
+# 文件维护说明
+# - 文件路径: src/main/resources/application.yml
+# - 主要职责: 提供运行时配置项，请保持键命名稳定并与代码绑定关系一致。
+# - 变更建议: 变更默认值前先评估兼容性，避免影响线上实例启动与行为。
+
+spring:
+  application:
+    name: player-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        # 本地无 Nacos 时允许启动；生产可设 NACOS_DISCOVERY_FAIL_FAST=true
+        fail-fast: ${NACOS_DISCOVERY_FAIL_FAST:false}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_CONFIG_ENABLED:false}
+        import-check:
+          enabled: false
+        file-extension: yaml
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 2000
+            readTimeout: 5000
+          battle-service:
+            url: ${BATTLE_SERVICE_URL:http://127.0.0.1:8991}
+          activity-service:
+            url: ${ACTIVITY_SERVICE_URL:http://127.0.0.1:8992}
+      circuitbreaker:
+        enabled: true
+  config:
+    import:
+      - "optional:nacos:player-service.yaml"
+      - "classpath:function.yml"
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_PLAYER:player_db}?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cache:
+    type: redis
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+
+# Netty 游戏协议端口（二进制 Protobuf）
+game:
+  netty:
+    host: 0.0.0.0
+    port: 8089
+    # 玩家连接读空闲超时（秒）：超过该时间未收到任何数据则断开连接。
+    read-idle-seconds: 60
+  auth:
+    # 最大允许同时在线的账号数量（基于统一登录令牌统计）。
+    max-online-accounts: 10000
+    # 账号登录令牌有效期（小时）。
+    token-ttl-hours: 24
+
+  ws:
+    # WebSocket 会话空闲超时（毫秒）：超过该时间未收到任何消息/心跳则关闭连接。
+    idle-timeout-ms: 90000
+    # 空闲扫描周期（毫秒）
+    sweep-interval-ms: 10000
+
+  idempotency:
+    # 是否启用消息幂等去重（不改协议版：session+msgId+payloadHash 短窗口回放响应）
+    enabled: true
+    # 幂等窗口（毫秒）：窗口内重复请求会回放上次响应并跳过业务执行
+    window-ms: 5000
+    # 全局最大缓存条目数（超出会尽量清理过期项）
+    max-entries: 20000
+  data-warmup:
+    # 启动后异步预热游戏配置缓存（不阻塞服务对外可用）。
+    enabled: true
+  dev:
+    embedded-redis:
+      # 本地无 Redis 时自动启动嵌入式实例；已有 Redis 或 Docker 时可设为 false
+      enabled: ${EMBEDDED_REDIS_ENABLED:true}
+  player-preload:
+    # 选角后异步预加载背包/技能/活动并支持按需降级回包。
+    enabled: true
+    # 是否在预加载完成后主动推送数据 ready 通知。
+    push-enabled: true
+    # 相同玩家同一数据类型触发去重窗口（毫秒）。
+    dedupe-window-ms: 2000
+
+  battle:
+    remote:
+      # true 时 player-service 通过 Feign 调用 battle-service 内部 API
+      enabled: ${GAME_BATTLE_REMOTE_ENABLED:false}
+  activity:
+    remote:
+      # true 时 player-service 通过 Feign 调用 activity-service 内部 API
+      enabled: ${GAME_ACTIVITY_REMOTE_ENABLED:false}
+
+# WebSocket（与文档一致的备用端口，可与 config/server.yml 对齐）
+server:
+  port: 8989
+  # 本地默认 HTTP；生产可通过 SERVER_SSL_ENABLED=true 启用 HTTPS
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    key-store: ${SERVER_SSL_KEY_STORE:classpath:server.p12}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SERVER_SSL_KEY_ALIAS:server}
+
+# RocketMQ：无环境时可设 enabled: false
+rocketmq:
+  enabled: false
+  name-server: 127.0.0.1:9876
+  consumer:
+    group: player-consumer-group
+    topic: PLAYER_EVENTS
+  producer:
+    group: player-producer-group
+    send-message-timeout: 3000
+
+# MQ 消费者本机唯一接收者标识（用于广播模式下筛选目标实例）。
+mq:
+  receiver-id: ${spring.application.name}-${server.port}
+
+battle:
+  mq:
+    topic: BATTLE_EVENTS
+
+skill:
+  mq:
+    topic: SKILL_EVENTS
+
+buff:
+  mq:
+    topic: BUFF_EVENTS
+
+chat:
+  mq:
+    topic: CHAT_EVENTS
+
+item:
+  mq:
+    topic: ITEM_EVENTS
+
+activity:
+  mq:
+    topic: ACTIVITY_EVENTS
+
+management:
+  endpoints:
+    jmx:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    cn.itcast.demo.mymmorpg: INFO

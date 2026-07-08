@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package mmorpg.chat;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "ChatProtocolProto";
+
+// ---------- 601 / 602 发送聊天消息 ----------
+
+message SendChatMsgCsReq {
+  uint32 channel = 1;
+  uint64 target_id = 2;
+  uint32 msg_type = 3;
+  string content = 4;
+  uint64 timestamp = 5;
+}
+
+message SendChatMsgScRsp {
+  int32 retcode = 1;
+  uint32 channel = 2;
+  uint64 target_id = 3;
+  string filtered_content = 4;
+  string error_msg = 5;
+}
+
+// ---------- 603 聊天消息推送 ----------
+
+message ChatMsgScNotify {
+  uint32 channel = 1;
+  uint64 sender_id = 2;
+  string sender_name = 3;
+  uint64 target_id = 4;
+  uint32 msg_type = 5;
+  string content = 6;
+  uint64 timestamp = 7;
+}

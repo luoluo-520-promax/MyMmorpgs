@@ -1,0 +1,9 @@
+server:
+  type: 10
+
+socket:
+  id: 999999
+  serverIp: 127.0.0.1
+
+rpc:
+  port: 8888

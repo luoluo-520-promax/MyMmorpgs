@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package mmorpg.skill;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "SkillProtocolProto";
+
+import "battle_protocol.proto";
+
+// ---------- 玩家技能展示 ----------
+
+message PlayerSkillInfo {
+  uint32 skill_id = 1;
+  string skill_name = 2;
+  string skill_effect = 3;
+  uint32 need_level = 4;
+  uint32 cooldown = 5;
+  uint32 mana_cost = 6;
+  float cast_time = 7;
+  uint32 skill_type = 8;
+  uint32 target_type = 9;
+  uint32 range = 10;
+  uint32 shape = 11;
+  string shape_params = 12;
+  uint32 remaining_cooldown = 13;
+  uint64 learn_time = 14;
+}
+
+// ---------- 301 / 302 获取玩家技能列表 ----------
+
+message GetPlayerSkillsCsReq {}
+
+message GetPlayerSkillsScRsp {
+  int32 retcode = 1;
+  repeated PlayerSkillInfo skills = 2;
+  bool loading = 3;
+}
+
+// ---------- 303 / 304 学习技能 ----------
+
+message LearnSkillCsReq {
+  uint32 skill_id = 1;
+}
+
+message LearnSkillScRsp {
+  int32 retcode = 1;
+  uint32 skill_id = 2;
+  PlayerSkillInfo skill_info = 3;
+}
+
+// ---------- 305 / 306 使用技能 ----------
+
+message CastSkillCsReq {
+  uint32 skill_id = 1;
+  uint64 target_entity_id = 2;
+  float target_x = 3;
+  float target_y = 4;
+  float target_z = 5;
+  uint64 timestamp = 6;
+}
+
+message CastSkillScRsp {
+  int32 retcode = 1;
+  uint32 skill_id = 2;
+  uint32 remaining_cooldown = 3;
+  uint32 damage = 4;
+  uint32 heal = 5;
+  repeated mmorpg.battle.EffectInfo effects = 6;
+}
+
+// ---------- 307 技能冷却通知 ----------
+
+message SkillCooldownScNotify {
+  uint32 skill_id = 1;
+  uint32 remaining_cooldown = 2;
+  uint64 cooldown_start_time = 3;
+}
+
+// ---------- 308 技能学习通知（服务端主动） ----------
+
+message SkillLearnScNotify {
+  PlayerSkillInfo skill_info = 1;
+}
+
+// ---------- 309 技能异步加载完成通知 ----------
+
+message SkillDataReadyScNotify {
+  repeated PlayerSkillInfo skills = 1;
+}

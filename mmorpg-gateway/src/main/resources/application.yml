@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: mmorpg-gateway
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: player-service
+          uri: lb://player-service
+          predicates:
+            - Path=/player/**,/ws/**,/battle/**,/activity/**
+
+server:
+  port: ${GATEWAY_PORT:8443}
+  ssl:
+    enabled: ${GATEWAY_SSL_ENABLED:false}
+    # 模拟 HTTPS：默认读取本地/测试证书；生产环境请改为正式证书
+    key-store: ${GATEWAY_SSL_KEY_STORE:classpath:certs/gateway-keystore.p12}
+    key-store-password: ${GATEWAY_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-type: ${GATEWAY_SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${GATEWAY_SSL_KEY_ALIAS:gateway}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+game:
+  gateway:
+    observe:
+      enabled: true
+      http-enabled: true
+      ws-enabled: true
+      sample-rate: 1.0
+      log-level: INFO
+    auth:
+      enabled: true
+      whitelist:
+        - /ws/**
+        - /player/**
+        - /actuator/**
+    rate-limit:
+      enabled: true
+      total-per-second: 2000
+      user-per-second: 30
+      whitelist:
+        - /actuator/**
+

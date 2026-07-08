@@ -1,0 +1,11 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="scene-service-unit">
+    <test name="scene-unit">
+        <packages>
+            <package name="cn.itcast.demo.mymmorpg.service"/>
+            <package name="cn.itcast.demo.mymmorpg.service.unit"/>
+            <package name="cn.itcast.demo.mymmorpg.model"/>
+            <package name="cn.itcast.demo.mymmorpg.config"/>
+        </packages>
+    </test>
+</suite>

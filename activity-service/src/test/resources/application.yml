@@ -1,0 +1,7 @@
+# 单元测试不连接 Nacos，关闭 Spring Cloud 对 config import 的强制校验
+spring:
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
