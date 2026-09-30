@@ -8,7 +8,9 @@
  */
 package cn.itcast.demo.mymmorpg.service;
 
-import cn.itcast.demo.mymmorpg.model.ActivityConfigPayload; // 活动配置 JSON 模型
+import cn.itcast.demo.mymmorpg.activity.ActivitySnapshotManager;
+import cn.itcast.demo.mymmorpg.activity.PostMortemProcessor;
+import cn.itcast.demo.mymmorpg.model.ActivityConditionEvaluator;
 import cn.itcast.demo.mymmorpg.model.RewardTierPayload; // 单档奖励配置模型
 import cn.itcast.demo.mymmorpg.model.PlayerActivityProgress; // 玩家活动进度模型
 import cn.itcast.demo.mymmorpg.entity.Activity; // MySQL activity 表实体
@@ -31,6 +33,7 @@ import cn.itcast.demo.mymmorpg.port.PlayerDataLoadPort; // 玩家数据预热端
 import cn.itcast.demo.mymmorpg.port.PlayerNotificationPort; // 玩家通知推送端口
 import com.fasterxml.jackson.databind.ObjectMapper; // Jackson JSON 序列化
 import com.fasterxml.jackson.databind.node.ObjectNode; // Jackson 可变 JSON 节点
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value; // 注入配置属性
 import org.springframework.stereotype.Service; // 注册 Spring Service Bean
 import org.springframework.transaction.annotation.Transactional; // 声明式事务
@@ -67,6 +70,8 @@ public class ActivityService { // 活动业务核心类
     private final ActivityPlayerProgressStore progressStore; // 读写 Redis 进度
     /** 背包发道具端口。 */
     private final ActivityItemGrantPort activityItemGrantPort; // 领奖时发放道具
+    /** 发奖履约（Outbox 优先）。 */
+    private final ObjectProvider<ActivityRewardFulfillmentService> rewardFulfillmentService;
     /** JSON 序列化器。 */
     private final ObjectMapper objectMapper; // 解析 activity.data 与 detail JSON
     /** 可扩展领奖策略。 */
@@ -80,8 +85,14 @@ public class ActivityService { // 活动业务核心类
     /** 是否启用玩家数据预加载（未就绪时返回 loading）。 */
     private final boolean preloadEnabled; // game.player-preload.enabled 配置
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ActivitySnapshotManager activitySnapshotManager;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PostMortemProcessor postMortemProcessor;
+
     /**
-     * 构造器注入所有依赖。
+     * 单测兼容构造器。
      */
     public ActivityService(
             ActivityRepository activityRepository,
@@ -94,16 +105,35 @@ public class ActivityService { // 活动业务核心类
             PlayerNotificationPort playerNotificationPort,
             PlayerDataLoadPort playerDataLoadPort,
             @Value("${game.player-preload.enabled:false}") boolean preloadEnabled) {
-        this.activityRepository = activityRepository; // 保存活动仓库
-        this.playerRepository = playerRepository; // 保存玩家仓库
-        this.progressStore = progressStore; // 保存进度存储
-        this.activityItemGrantPort = activityItemGrantPort; // 保存背包端口
-        this.objectMapper = objectMapper; // 保存 JSON 映射器
-        this.activityPolicy = activityPolicy; // 保存领奖策略
-        this.activityEventPublisher = activityEventPublisher; // 保存事件发布器
-        this.playerNotificationPort = playerNotificationPort; // 保存通知端口
-        this.playerDataLoadPort = playerDataLoadPort; // 保存预热端口
-        this.preloadEnabled = preloadEnabled; // 保存预加载开关
+        this(activityRepository, playerRepository, progressStore, activityItemGrantPort,
+                null, objectMapper, activityPolicy, activityEventPublisher,
+                playerNotificationPort, playerDataLoadPort, preloadEnabled);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ActivityService(
+            ActivityRepository activityRepository,
+            PlayerRepository playerRepository,
+            ActivityPlayerProgressStore progressStore,
+            ActivityItemGrantPort activityItemGrantPort,
+            ObjectProvider<ActivityRewardFulfillmentService> rewardFulfillmentService,
+            ObjectMapper objectMapper,
+            ActivityPolicy activityPolicy,
+            ActivityEventPublisher activityEventPublisher,
+            PlayerNotificationPort playerNotificationPort,
+            PlayerDataLoadPort playerDataLoadPort,
+            @Value("${game.player-preload.enabled:false}") boolean preloadEnabled) {
+        this.activityRepository = activityRepository;
+        this.playerRepository = playerRepository;
+        this.progressStore = progressStore;
+        this.activityItemGrantPort = activityItemGrantPort;
+        this.rewardFulfillmentService = rewardFulfillmentService;
+        this.objectMapper = objectMapper;
+        this.activityPolicy = activityPolicy;
+        this.activityEventPublisher = activityEventPublisher;
+        this.playerNotificationPort = playerNotificationPort;
+        this.playerDataLoadPort = playerDataLoadPort;
+        this.preloadEnabled = preloadEnabled;
     }
 
     /**
@@ -133,7 +163,7 @@ public class ActivityService { // 活动业务核心类
         for (Activity a : activityRepository.findByOpenedTrue()) { // 遍历所有已开启活动
             ActivityConfigPayload cfg = parseConfig(a); // 解析 data JSON 配置
             PlayerActivityProgress prog = progressStore.loadOrCreate(playerId, a.getId()); // 加载或创建玩家进度
-            if (!visibleInList(a, cfg, now, prog)) {
+            if (!visibleInList(a, cfg, now, prog, playerId)) {
                 continue; // 不可见则跳过
             } // if 不可见 结束
             int st = computeStatus(now, cfg); // 计算活动三态
@@ -165,6 +195,9 @@ public class ActivityService { // 活动业务核心类
         if (playerRepository.findById(playerId).isEmpty()) {
             return detailRsp(RetCode.PLAYER_NOT_FOUND, 0, 0, 0, "", List.of()); // 玩家不存在
         } // if 玩家不存在 结束
+        if (activitySnapshotManager != null) {
+            activitySnapshotManager.trackActivePlayer(playerId);
+        }
         long aid = req.getActivityId(); // 请求的活动 ID
         Optional<Activity> opt = activityRepository.findById(aid); // 查库
         if (opt.isEmpty()) { // 数据库中无对应记录
@@ -175,6 +208,9 @@ public class ActivityService { // 活动业务核心类
             return detailRsp(ActivityRetCode.ACTIVITY_CLOSED, aid, a.getType() == null ? 0 : a.getType(), 0, "", List.of()); // 活动已关闭
         } // if 未开启 结束
         ActivityConfigPayload cfg = parseConfig(a); // 解析配置
+        if (!isPublishedForPlayer(cfg, playerId)) {
+            return detailRsp(ActivityRetCode.ACTIVITY_CLOSED, aid, a.getType() == null ? 0 : a.getType(), 0, "", List.of());
+        }
         long now = System.currentTimeMillis(); // 当前时间
         int st = computeStatus(now, cfg); // 活动三态
         PlayerActivityProgress p = progressStore.loadOrCreate(playerId, aid); // 玩家进度
@@ -246,7 +282,22 @@ public class ActivityService { // 活动业务核心类
                     .build()); // 构建 ItemReward
         } // for 构建 grantList 结束
 
-        int bagRc = activityItemGrantPort.grantItemsForActivity(playerId, grantList); // 调用背包发道具
+        StringBuilder tiersKey = new StringBuilder();
+        for (RewardTierPayload t : toGrant) {
+            if (tiersKey.length() > 0) {
+                tiersKey.append(',');
+            }
+            tiersKey.append(t.index);
+        }
+        String grantIdemKey = "activity:" + aid + ":tiers:" + tiersKey;
+        int bagRc;
+        ActivityRewardFulfillmentService fulfillment =
+                rewardFulfillmentService == null ? null : rewardFulfillmentService.getIfAvailable();
+        if (fulfillment != null) {
+            bagRc = fulfillment.fulfill(playerId, aid, grantIdemKey, toGrant, grantList);
+        } else {
+            bagRc = activityItemGrantPort.grantItemsForActivity(playerId, grantIdemKey, grantList); // 调用背包发道具
+        }
         if (bagRc == BagRetCode.BAG_FULL) {
             return claimRsp(ActivityRetCode.BAG_FULL, aid, rewardIndex, List.of(), 0); // 背包满
         } // if 背包满 结束
@@ -254,12 +305,15 @@ public class ActivityService { // 活动业务核心类
             return claimRsp(ActivityRetCode.CONDITION_NOT_MET, aid, rewardIndex, List.of(), 0); // 背包其他错误
         } // if 非 OK 结束
 
-        for (RewardTierPayload t : toGrant) { // 逐项处理集合元素
-            p.claimed.add(t.index); // 标记已领
+        for (RewardTierPayload t : toGrant) {
+            p.claimed.add(t.index);
             if (t.signDay != null) {
-                p.signDays.add(t.signDay); // 签到类记录已签天数
-            } // if 有 signDay 结束
-        } // for 更新进度 结束
+                p.signDays.add(t.signDay);
+            }
+            if (t.tokenAmount != null && t.tokenAmount > 0) {
+                p.tokenAmount += t.tokenAmount;
+            }
+        }
         progressStore.save(playerId, aid, p); // 持久化到 Redis
         int idxOut = rewardIndex == 0 ? 0 : rewardIndex; // 响应中 rewardIndex：一键领取仍为 0
         activityEventPublisher.publishRewardClaimed(playerId, aid, a.getType() == null ? 0 : a.getType(), idxOut, toGrant.size()); // 发 MQ 事件
@@ -281,6 +335,18 @@ public class ActivityService { // 活动业务核心类
         p.rechargeAmount += delta; // 累加充值金额
         progressStore.save(playerId, activityId, p); // 写回 Redis
     } // addRechargeProgress 结束
+
+    /**
+     * 战斗胜利次数 +delta（战斗结束 MQ / 内部 API 投影）。
+     */
+    public void addBattleWinProgress(long playerId, long activityId, int delta) {
+        if (delta <= 0) {
+            return;
+        }
+        PlayerActivityProgress p = progressStore.loadOrCreate(playerId, activityId);
+        p.battleWins += delta;
+        progressStore.save(playerId, activityId, p);
+    }
 
     /**
      * 向全服在线玩家广播活动状态变更通知（807），供 JMX 等调用。
@@ -332,10 +398,14 @@ public class ActivityService { // 活动业务核心类
     /**
      * 判断活动是否应在列表中展示：已开启且（进行中/未开始，或已结束但仍有可领档位）。
      */
-    private boolean visibleInList(Activity a, ActivityConfigPayload cfg, long nowMs, PlayerActivityProgress prog) {
+    private boolean visibleInList(Activity a, ActivityConfigPayload cfg, long nowMs,
+                                  PlayerActivityProgress prog, long playerId) {
         if (!Boolean.TRUE.equals(a.getOpened())) {
             return false; // 未开启不展示
         } // if 未开启 结束
+        if (!isPublishedForPlayer(cfg, playerId)) {
+            return false;
+        }
         int st = computeStatus(nowMs, cfg); // 活动三态
         if (st == STATUS_NOT_STARTED || st == STATUS_IN_PROGRESS) {
             return true; // 未开始或进行中始终可见
@@ -347,6 +417,28 @@ public class ActivityService { // 活动业务核心类
         } // for 结束
         return false; // 已结束且无待领档位，隐藏
     } // visibleInList 结束
+
+    /** DRAFT / WhiteList_Only 灰度可见性。 */
+    static boolean isPublishedForPlayer(ActivityConfigPayload cfg, long playerId) {
+        if (cfg == null) {
+            return true;
+        }
+        String status = cfg.publishStatus == null ? "PUBLISHED" : cfg.publishStatus.trim().toUpperCase();
+        if ("DRAFT".equals(status)) {
+            return cfg.whiteListOnly && inWhiteList(cfg, playerId);
+        }
+        if (cfg.whiteListOnly) {
+            return inWhiteList(cfg, playerId);
+        }
+        return true;
+    }
+
+    private static boolean inWhiteList(ActivityConfigPayload cfg, long playerId) {
+        if (cfg.whiteListPlayerIds == null || cfg.whiteListPlayerIds.isEmpty()) {
+            return false;
+        }
+        return cfg.whiteListPlayerIds.contains(playerId);
+    }
 
     /**
      * 构建各档位的 RewardStatus（已领/可领标志）。
@@ -407,15 +499,21 @@ public class ActivityService { // 活动业务核心类
      * 判断档位达标条件是否满足（首充金额或签到天数）。
      */
     private boolean tierConditionMet(Activity a, ActivityConfigPayload cfg, RewardTierPayload tier, PlayerActivityProgress p, long nowMs) {
+        if (!ActivityConditionEvaluator.allMet(cfg.conditions, p)) {
+            return false;
+        }
         if (tier.targetRecharge != null) {
-            return p.rechargeAmount >= tier.targetRecharge; // 首充达标
-        } // if 首充条件 结束
+            return p.rechargeAmount >= tier.targetRecharge;
+        }
         if (tier.signDay != null) {
-            int day = activityDayIndex(nowMs, cfg.startTime); // 当前活动第几天
-            return day >= tier.signDay; // 签到天数达标
-        } // if 签到条件 结束
-        return true; // 无条件档位直接满足
-    } // tierConditionMet 结束
+            int day = activityDayIndex(nowMs, cfg.startTime);
+            return day >= tier.signDay;
+        }
+        if (tier.requiredStage != null) {
+            return p.currentStage >= tier.requiredStage;
+        }
+        return true;
+    }
 
     /**
      * 综合三态、已领状态与达标条件，判断档位是否可领取。
@@ -436,22 +534,49 @@ public class ActivityService { // 活动业务核心类
      */
     private String buildDetailJson(Activity a, ActivityConfigPayload cfg, PlayerActivityProgress p, long nowMs) {
         try {
-            ObjectNode root = objectMapper.createObjectNode(); // 创建 JSON 根节点
-            root.put("recharge_amount", p.rechargeAmount); // 当前充值额
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put("recharge_amount", p.rechargeAmount);
             int target = cfg.rewardTiers.stream()
                     .map(t -> t.targetRecharge)
                     .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(0); // 取第一个首充目标作为展示目标
-            root.put("target_amount", target); // 目标充值额
-            root.put("activity_day", activityDayIndex(nowMs, cfg.startTime)); // 活动内第几天
-            root.set("signed_days", objectMapper.valueToTree(p.signDays)); // 已签到天数数组
-            root.put("type", a.getType() == null ? 0 : a.getType()); // 活动类型
-            return objectMapper.writeValueAsString(root); // 序列化为 JSON 字符串
+                    .orElse(0);
+            root.put("target_amount", target);
+            root.put("activity_day", activityDayIndex(nowMs, cfg.startTime));
+            root.put("token_amount", p.tokenAmount);
+            root.put("battle_wins", p.battleWins);
+            root.put("current_stage", p.currentStage);
+            root.set("signed_days", objectMapper.valueToTree(p.signDays));
+            root.put("type", a.getType() == null ? 0 : a.getType());
+            root.put("config_version", cfg.configVersion);
+            root.put("description", cfg.description != null ? cfg.description : "");
+            root.put("gameplay", cfg.gameplay != null ? cfg.gameplay : "");
+            root.put("rules", cfg.rules != null ? cfg.rules : "");
+            root.put("reward_method", cfg.rewardMethod);
+            root.put("shop_id", cfg.shopId);
+            if (cfg.token != null) {
+                root.set("token", objectMapper.valueToTree(cfg.token));
+            }
+            if (cfg.costLimit != null) {
+                root.set("cost_limit", objectMapper.valueToTree(cfg.costLimit));
+            }
+            if (cfg.stages != null && !cfg.stages.isEmpty()) {
+                root.set("stages", objectMapper.valueToTree(cfg.stages));
+            }
+            if (cfg.shopProducts != null && !cfg.shopProducts.isEmpty()) {
+                root.set("shop_products", objectMapper.valueToTree(cfg.shopProducts));
+            }
+            if (cfg.uiResources != null) {
+                root.set("ui_resources", objectMapper.valueToTree(cfg.uiResources));
+            }
+            if (cfg.displayText != null) {
+                root.set("display_text", objectMapper.valueToTree(cfg.displayText));
+            }
+            return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
-            return "{}"; // 异常时返回空 JSON 对象
-        } // catch 结束
-    } // buildDetailJson 结束
+            return "{}";
+        }
+    }
 
     /**
      * 组装活动列表成功/失败响应 ProtocolMessage。

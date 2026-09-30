@@ -6,6 +6,13 @@
             <package name="cn.itcast.demo.mymmorpg.service.unit"/>
             <package name="cn.itcast.demo.mymmorpg.model"/>
             <package name="cn.itcast.demo.mymmorpg.config"/>
+            <package name="cn.itcast.demo.mymmorpg.challenge"/>
+            <package name="cn.itcast.demo.mymmorpg.element"/>
+            <package name="cn.itcast.demo.mymmorpg.reaction"/>
+            <package name="cn.itcast.demo.mymmorpg.ai.bt"/>
+            <package name="cn.itcast.demo.mymmorpg.dda"/>
+            <package name="cn.itcast.demo.mymmorpg.ai.threat"/>
+            <package name="cn.itcast.demo.mymmorpg.abyss"/>
         </packages>
     </test>
 </suite>

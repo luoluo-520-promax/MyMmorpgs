@@ -1,0 +1,8 @@
+{
+  "tabs": [
+    {"tabId": "topup", "name": "充值", "sort": 1, "opened": true},
+    {"tabId": "discount", "name": "特惠", "sort": 2, "opened": true},
+    {"tabId": "pack", "name": "礼包", "sort": 3, "opened": true},
+    {"tabId": "skin", "name": "皮肤", "sort": 4, "opened": true}
+  ]
+}

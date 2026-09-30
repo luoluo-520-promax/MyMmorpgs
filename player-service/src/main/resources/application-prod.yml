@@ -1,0 +1,31 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    password: ${MYSQL_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+game:
+  internal-api:
+    enabled: true
+    secret: ${INTERNAL_API_SECRET:}
+  session-crypto:
+    rsa-private-key-base64: ${SESSION_RSA_PRIVATE_KEY}
+    rsa-public-key-base64: ${SESSION_RSA_PUBLIC_KEY}
+
+shop:
+  payment:
+    production-verify-enabled: ${SHOP_PAYMENT_PRODUCTION_VERIFY:true}
+    mock-enabled: false
+    channel-secrets:
+      wechat: ${SHOP_PAYMENT_CHANNEL_SECRET_WECHAT:}
+      alipay: ${SHOP_PAYMENT_CHANNEL_SECRET_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_CHANNEL_SECRET_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_CHANNEL_SECRET_GOOGLE_PLAY:}
+
+rocketmq:
+  enabled: ${ROCKETMQ_ENABLED:true}

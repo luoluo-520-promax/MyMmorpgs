@@ -5,7 +5,7 @@
  */
 package cn.itcast.demo.mymmorpg.service.integration;
 
-import cn.itcast.demo.mymmorpg.service.integration.support.RedisTestContainerHolder; // 测试 Redis 工具
+import cn.itcast.demo.mymmorpg.test.support.RedisTestContainerHolder;
 import cn.itcast.demo.mymmorpg.service.BattleServiceApplication; // 战斗服务主类
 import org.springframework.beans.factory.annotation.Autowired; // 自动注入
 import org.springframework.boot.test.context.SpringBootTest; // 完整 Spring Boot 测试

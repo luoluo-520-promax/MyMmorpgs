@@ -8,10 +8,10 @@
  */
 package cn.itcast.demo.mymmorpg.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // 反序列化时忽略 JSON 里多出来的未知字段
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import java.util.HashSet; // 哈希集合，用于已领取档位、已签到天数等去重存储
-import java.util.Set; // 集合接口
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Redis 中玩家活动进度（activity:prog:{playerId}:{activityId}）。
@@ -24,5 +24,11 @@ public class PlayerActivityProgress { // 玩家在某一活动下的进度快照
     /** 累计充值金额（首充类活动用）。 */
     public long rechargeAmount; // 首充达标判断依据
     /** 已签到的活动内第几天（签到类活动用）。 */
-    public Set<Integer> signDays = new HashSet<>(); // 已签到天数集合
+    public Set<Integer> signDays = new HashSet<>();
+    /** 当前活动代币/积分余额。 */
+    public int tokenAmount;
+    /** 当前解锁阶段序号。 */
+    public int currentStage;
+    /** 活动期间累计战斗胜利次数（战斗结束 MQ 投影）。 */
+    public int battleWins;
 } // PlayerActivityProgress 类结束

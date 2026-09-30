@@ -9,7 +9,8 @@
 
 package cn.itcast.demo.mymmorpg.client; // player-service Feign 客户端，远程调用 battle/activity
 
-import org.springframework.cloud.openfeign.FeignClient; // Feign 远程调用 FeignClient
+import cn.itcast.demo.mymmorpg.config.InternalApiFeignConfiguration;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType; // HTTP Content-Type 与响应体
 import org.springframework.web.bind.annotation.PostMapping; // Spring MVC REST 映射注解
 import org.springframework.web.bind.annotation.RequestBody; // Spring MVC REST 映射注解
@@ -19,8 +20,9 @@ import org.springframework.web.bind.annotation.RequestHeader; // Spring MVC REST
  * 微服务模式下由 RemoteBattleGateway 注入并封装 Protobuf 编解码。
  */
 
-@FeignClient(name = "battle-service", contextId = "battleCommandClient") // Nacos 服务名 battle-service
-
+@FeignClient(name = "battle-service", contextId = "battleCommandClient",
+        configuration = InternalApiFeignConfiguration.class,
+        fallbackFactory = BattleCommandClientFallbackFactory.class)
 public interface BattleCommandClient { // BattleCommandClient 接口定义
     /**
      * 发起战斗：body 为 BattleStartCsReq 字节，响应含 battleId 与敌我属性快照。

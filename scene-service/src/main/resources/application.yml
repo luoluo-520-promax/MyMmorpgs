@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: scene-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+
+server:
+  port: 8981
+
+game:
+  center:
+    mode: ${GAME_CENTER_MODE:local}
+    local-node-id: ${GAME_CENTER_LOCAL_NODE_ID:local}
+    remote-base-url: ${GAME_CENTER_REMOTE_BASE_URL:}
+    advertise-host: ${GAME_CENTER_ADVERTISE_HOST:127.0.0.1}
+    advertise-port: ${GAME_CENTER_ADVERTISE_PORT:8089}
+    remote-timeout-ms: ${GAME_CENTER_REMOTE_TIMEOUT_MS:2500}
+  scene:
+    max-players-per-line: ${GAME_SCENE_MAX_PLAYERS_PER_LINE:100}
+    max-lines-per-map: ${GAME_SCENE_MAX_LINES_PER_MAP:20}
+    empty-line-ttl-ms: ${GAME_SCENE_EMPTY_LINE_TTL_MS:300000}
+    empty-line-gc-ms: ${GAME_SCENE_EMPTY_LINE_GC_MS:30000}
+    reconnect-grace-ms: ${GAME_SCENE_RECONNECT_GRACE_MS:60000}
+    reconnect-protection-ms: ${GAME_SCENE_RECONNECT_PROTECTION_MS:30000}
+    register-to-center: ${GAME_SCENE_REGISTER_TO_CENTER:false}
+    owned-scene-ids: []
+    node-heartbeat-ms: ${GAME_SCENE_NODE_HEARTBEAT_MS:15000}
+    node-stale-ms: ${GAME_SCENE_NODE_STALE_MS:45000}
+  npc-ai:
+    enabled: ${GAME_NPC_AI_ENABLED:true}
+    llm-enabled: ${GAME_NPC_AI_LLM_ENABLED:false}
+    api-key: ${GAME_NPC_AI_API_KEY:}
+    base-url: ${GAME_NPC_AI_BASE_URL:https://api.openai.com/v1}
+    model: ${GAME_NPC_AI_MODEL:gpt-4o-mini}
+    timeout-ms: ${GAME_NPC_AI_TIMEOUT_MS:15000}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+  port:
+    remote:
+      enabled: ${GAME_PORT_REMOTE_ENABLED:false}
+      player-service-url: ${PLAYER_SERVICE_URL:http://127.0.0.1:8989}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

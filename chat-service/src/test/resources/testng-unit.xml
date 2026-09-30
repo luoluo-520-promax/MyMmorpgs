@@ -4,6 +4,7 @@
         <packages>
             <package name="cn.itcast.demo.mymmorpg.config"/>
             <package name="cn.itcast.demo.mymmorpg.support"/>
+            <package name="cn.itcast.demo.mymmorpg.service"/>
         </packages>
     </test>
 </suite>

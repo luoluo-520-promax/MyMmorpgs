@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MyMmorpg 配置后台</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a222c;
+      --text: #e7ecf1;
+      --muted: #8b9aab;
+      --accent: #3d9cfd;
+      --ok: #3ecf8e;
+      --warn: #f0a202;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Segoe UI", "PingFang SC", sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1b2a3d, var(--bg));
+      color: var(--text); min-height: 100vh;
+    }
+    header {
+      padding: 28px 32px 12px; border-bottom: 1px solid #243041;
+    }
+    header h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; }
+    header p { margin: 8px 0 0; color: var(--muted); }
+    main { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 20px 24px 40px; }
+    nav {
+      background: var(--panel); border-radius: 12px; padding: 12px;
+      border: 1px solid #2a3648; height: fit-content;
+    }
+    nav button {
+      display: block; width: 100%; text-align: left; margin: 4px 0;
+      background: transparent; border: 0; color: var(--text);
+      padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    }
+    nav button.active, nav button:hover { background: #243247; }
+    section.panel {
+      display: none; background: var(--panel); border-radius: 12px;
+      border: 1px solid #2a3648; padding: 20px;
+    }
+    section.panel.active { display: block; }
+    label { display: block; color: var(--muted); font-size: 13px; margin: 10px 0 4px; }
+    input, textarea, select {
+      width: 100%; background: #101820; color: var(--text);
+      border: 1px solid #334155; border-radius: 8px; padding: 10px;
+    }
+    textarea { min-height: 160px; font-family: ui-monospace, Consolas, monospace; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      background: var(--accent); color: #041018; border: 0; border-radius: 8px;
+      padding: 10px 16px; font-weight: 600; cursor: pointer;
+    }
+    .btn.secondary { background: #334155; color: var(--text); }
+    pre {
+      background: #0b1118; border-radius: 8px; padding: 12px; overflow: auto;
+      border: 1px solid #243041; min-height: 120px;
+    }
+    .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>MyMmorpg Ops Console</h1>
+  <p>活动 / 任务 / 商城配置预览 · 热更 · Diff · 回滚（需 Admin HMAC）</p>
+</header>
+<main>
+  <nav>
+    <button class="active" data-tab="edit">在线编辑</button>
+    <button data-tab="diff">变更 Diff</button>
+    <button data-tab="reload">热更 / 灰度</button>
+    <button data-tab="timeline">版本时间线</button>
+    <button data-tab="rollback">回滚历史</button>
+  </nav>
+
+  <section id="edit" class="panel active">
+    <label>域</label>
+    <select id="domain">
+      <option>activity</option>
+      <option>quest</option>
+      <option>shop</option>
+      <option>gacha</option>
+    </select>
+    <label>变更前 JSON</label>
+    <textarea id="before">{}</textarea>
+    <label>变更后 JSON</label>
+    <textarea id="after">{"id":"demo","enabled":true}</textarea>
+    <div class="row">
+      <button class="btn" onclick="publish()">发布快照</button>
+      <button class="btn secondary" onclick="validateRefs()">校验引用</button>
+    </div>
+    <p class="hint">POST /admin/ops/config/publish · /admin/ops/config/validate-refs</p>
+    <pre id="editOut">等待操作…</pre>
+  </section>
+
+  <section id="diff" class="panel">
+    <label>versionId</label>
+    <input id="versionId" placeholder="cfg-xxxxxxxx"/>
+    <div class="row">
+      <button class="btn" onclick="loadDiff()">查看 Diff</button>
+      <button class="btn secondary" onclick="listSnapshots()">快照列表</button>
+    </div>
+    <pre id="diffOut">等待操作…</pre>
+  </section>
+
+  <section id="reload" class="panel">
+    <label>灰度流量比例（1% → 5% → 20% → 100%）</label>
+    <input id="grayPercent" type="range" value="10" min="1" max="100" step="1"
+           oninput="document.getElementById('grayPctLabel').textContent=this.value+'%'"/>
+    <p class="hint">当前：<span id="grayPctLabel">10%</span> · 异常时可一键熔断回滚（仅影响灰度玩家）</p>
+    <label>灰度服务器 ID（逗号分隔，可选）</label>
+    <input id="grayServers" placeholder="s1,s2"/>
+    <label>灰度 Label / zoneId</label>
+    <input id="grayLabel" placeholder="p20-siege"/>
+    <input id="grayZoneId" placeholder="1001"/>
+    <div class="row">
+      <button class="btn" onclick="reloadAll()">全量热更</button>
+      <button class="btn secondary" onclick="grayReload()">灰度热更</button>
+      <button class="btn secondary" onclick="grayPublish()">灰度发布配置</button>
+      <button class="btn secondary" onclick="grayRollback()">灰度熔断回滚</button>
+    </div>
+    <pre id="reloadOut">等待操作…</pre>
+  </section>
+
+  <section id="timeline" class="panel">
+    <label>版本时间线（version_timeline）</label>
+    <div class="row">
+      <button class="btn" onclick="listTimeline()">刷新 Timeline</button>
+      <button class="btn secondary" onclick="reloadTimeline()">重载内存 Timeline</button>
+    </div>
+    <pre id="timelineOut">等待操作…</pre>
+  </section>
+
+  <section id="rollback" class="panel">
+    <label>回滚域</label>
+    <input id="rbDomain" value="activity"/>
+    <label>目标 versionId</label>
+    <input id="rbVersion" placeholder="cfg-xxxxxxxx"/>
+    <label>原因</label>
+    <input id="rbReason" value="ops rollback"/>
+    <div class="row">
+      <button class="btn" onclick="doRollback()">执行回滚</button>
+      <button class="btn secondary" onclick="rbHistory()">回滚历史</button>
+    </div>
+    <pre id="rbOut">等待操作…</pre>
+  </section>
+</main>
+<script>
+  const tabs = document.querySelectorAll('nav button');
+  tabs.forEach(btn => btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('section.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  }));
+
+  function headers() {
+    // 浏览器侧需由网关或本地代理注入 Admin HMAC / API Key
+    return { 'Content-Type': 'application/json', 'X-Admin-Demo': '1' };
+  }
+  async function call(method, url, body) {
+    const opt = { method, headers: headers() };
+    if (body !== undefined) opt.body = JSON.stringify(body);
+    const res = await fetch(url, opt);
+    const text = await res.text();
+    try { return JSON.stringify(JSON.parse(text), null, 2); }
+    catch { return text; }
+  }
+  async function publish() {
+    const domain = document.getElementById('domain').value;
+    const q = `/admin/ops/config/publish?domain=${encodeURIComponent(domain)}&gray=false&grayPercent=100`;
+    document.getElementById('editOut').textContent = await call('POST', q, {
+      before: document.getElementById('before').value,
+      after: document.getElementById('after').value
+    });
+  }
+  async function validateRefs() {
+    document.getElementById('editOut').textContent = await call('POST', '/admin/ops/config/validate-refs', {
+      refs: [{ type: 'item', id: '1001', path: 'reward.itemId' }],
+      knownItemIds: ['1001', '1002'],
+      knownQuestIds: ['q1'],
+      knownShopProductIds: ['p1']
+    });
+  }
+  async function loadDiff() {
+    const id = document.getElementById('versionId').value;
+    document.getElementById('diffOut').textContent =
+      await call('GET', `/admin/ops/config/diff?versionId=${encodeURIComponent(id)}`);
+  }
+  async function listSnapshots() {
+    document.getElementById('diffOut').textContent =
+      await call('GET', '/admin/ops/config/snapshots?limit=20');
+  }
+  async function reloadAll() {
+    document.getElementById('reloadOut').textContent = await call('POST', '/admin/ops/reload');
+  }
+  async function grayReload() {
+    const p = document.getElementById('grayPercent').value;
+    const s = document.getElementById('grayServers').value;
+    document.getElementById('reloadOut').textContent =
+      await call('POST', `/admin/ops/config/gray-reload?grayPercent=${p}&grayServerIds=${encodeURIComponent(s)}`);
+  }
+  async function grayPublish() {
+    const body = {
+      label: document.getElementById('grayLabel').value || 'gray',
+      zoneId: Number(document.getElementById('grayZoneId').value || 0) || null,
+      trafficPercent: Number(document.getElementById('grayPercent').value)
+    };
+    document.getElementById('reloadOut').textContent =
+      await call('POST', '/admin/ops/version/gray-publish', body);
+  }
+  async function grayRollback() {
+    const label = document.getElementById('grayLabel').value;
+    document.getElementById('reloadOut').textContent =
+      await call('POST', `/admin/ops/version/gray-rollback?grayLabel=${encodeURIComponent(label)}`);
+  }
+  async function listTimeline() {
+    document.getElementById('timelineOut').textContent =
+      await call('GET', '/admin/ops/version-timeline');
+  }
+  async function reloadTimeline() {
+    document.getElementById('timelineOut').textContent =
+      await call('POST', '/admin/ops/version-timeline/reload');
+  }
+  async function doRollback() {
+    const d = document.getElementById('rbDomain').value;
+    const v = document.getElementById('rbVersion').value;
+    const r = document.getElementById('rbReason').value;
+    document.getElementById('rbOut').textContent = await call('POST',
+      `/admin/ops/config/rollback?domain=${encodeURIComponent(d)}&versionId=${encodeURIComponent(v)}&reason=${encodeURIComponent(r)}`);
+  }
+  async function rbHistory() {
+    document.getElementById('rbOut').textContent =
+      await call('GET', '/admin/ops/config/rollback-history?limit=20');
+  }
+</script>
+</body>
+</html>

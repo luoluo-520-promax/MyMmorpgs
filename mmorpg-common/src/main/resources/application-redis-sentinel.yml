@@ -1,0 +1,11 @@
+# 启用方式：SPRING_PROFILES_ACTIVE=prod,redis-sentinel
+# 依赖：docker compose -f docker-compose.redis-sentinel.yml up -d
+spring:
+  data:
+    redis:
+      host: # 使用 sentinel 时忽略 standalone host
+      password: ${REDIS_PASSWORD:}
+      sentinel:
+        master: ${REDIS_SENTINEL_MASTER:mymmorpg-redis}
+        nodes: ${REDIS_SENTINEL_NODES:127.0.0.1:26379}
+      timeout: 3s

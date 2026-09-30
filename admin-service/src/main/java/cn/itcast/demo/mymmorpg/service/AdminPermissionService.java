@@ -91,6 +91,7 @@ public class AdminPermissionService { // admin_user→admin_user_role→admin_ro
 
     /**
      * 检查用户是否拥有指定权限标识；后台操作入口应调用此方法，false 则拒绝访问。
+     * 拥有 {@code *}（SUPERADMIN 预设）时视为全部放行。
      */
     @Transactional(readOnly = true) // 只读事务包裹 RBAC 链路查询
     public boolean hasPermission(Long userId, String permissionCode) { // 检查用户是否拥有指定权限标识；后台操作入口应调用此方法，false 则拒绝访问
@@ -98,6 +99,9 @@ public class AdminPermissionService { // admin_user→admin_user_role→admin_ro
             return false; // 直接拒绝后台操作
         }
         Set<String> perms = listPermissionsByUserId(userId); // 计算 admin_user 全部 permission.code
+        if (perms.contains("*")) { // SUPERADMIN 通配
+            return true;
+        }
         return perms.contains(permissionCode); // 是否包含目标权限如 complaint:handle
     }
 }

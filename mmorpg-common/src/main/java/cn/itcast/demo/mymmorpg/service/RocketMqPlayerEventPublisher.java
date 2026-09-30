@@ -4,6 +4,7 @@
  */
 package cn.itcast.demo.mymmorpg.service;
 
+import cn.itcast.demo.mymmorpg.support.DispatchFailureReporter;
 import org.apache.rocketmq.client.producer.DefaultMQProducer; // 共享生产者，由 RocketMqProducerConfig 创建并 start
 import org.apache.rocketmq.common.message.Message; // RocketMQ 消息对象（topic + tags + body 字节）
 import org.slf4j.Logger; // 发送失败时 warn，不阻断主登录流程
@@ -21,6 +22,7 @@ class RocketMqPlayerEventPublisher implements PlayerEventPublisher {
     private static final Logger log = LoggerFactory.getLogger(RocketMqPlayerEventPublisher.class); // 本类日志
 
     private final DefaultMQProducer producer; // 已启动的生产者，send 时同步等待 Broker ACK（演示项目简化）
+    private final DispatchFailureReporter failureReporter;
 
     /** 账号登录与选角进入共用 Topic，下游可按 tags 区分 account / enter */
     @Value("${player.mq.topic.login:PLAYER_LOGIN}")
@@ -30,8 +32,9 @@ class RocketMqPlayerEventPublisher implements PlayerEventPublisher {
     @Value("${player.mq.topic.logout:PLAYER_LOGOUT}")
     private String topicLogout;
 
-    RocketMqPlayerEventPublisher(DefaultMQProducer producer) {
+    RocketMqPlayerEventPublisher(DefaultMQProducer producer, DispatchFailureReporter failureReporter) {
         this.producer = producer; // 构造器注入，与 RocketMqSceneEventPublisher 等同享一个 producer 实例
+        this.failureReporter = failureReporter;
     }
 
     @Override
@@ -60,7 +63,8 @@ class RocketMqPlayerEventPublisher implements PlayerEventPublisher {
             Message msg = new Message(topic, tags, body.getBytes(StandardCharsets.UTF_8)); // 指定 Topic、过滤 tag、UTF-8 载荷
             producer.send(msg); // 同步发送，Broker 不可达时进入 catch
         } catch (Exception e) {
-            log.warn("RocketMQ 玩家事件发送失败 body={}", body, e); // 记录 body 便于事后补数或排查 NameServer/Broker
+            log.warn("RocketMQ 玩家事件发送失败 body={}", body, e);
+            failureReporter.recordMqPublishFailure();
         }
     }
 }

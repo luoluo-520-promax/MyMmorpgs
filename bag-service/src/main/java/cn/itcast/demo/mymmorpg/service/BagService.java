@@ -8,14 +8,19 @@
  */
 package cn.itcast.demo.mymmorpg.service; // 背包 GET_BAG_INFO/USE_ITEM 等协议，Redis bag:info 缓存
 
+import cn.itcast.demo.mymmorpg.entity.GrantIdempotency;
 import cn.itcast.demo.mymmorpg.entity.ItemConfig; // item_config 表，道具名称/堆叠/售价/经验值
 import cn.itcast.demo.mymmorpg.entity.Player; // 玩家实体，含 level/gold
 import cn.itcast.demo.mymmorpg.entity.PlayerBagItem; // player_bag_item 表，背包槽位与数量
 import cn.itcast.demo.mymmorpg.protocol.BagRetCode; // 背包专用返回码：ITEM_NOT_FOUND/BAG_FULL 等
 import cn.itcast.demo.mymmorpg.port.ActivityItemGrantPort; // 活动领奖时调用 grantItemsForActivity
+import cn.itcast.demo.mymmorpg.port.BagCommandPort;
+import cn.itcast.demo.mymmorpg.port.BagItemGrantPort;
+import cn.itcast.demo.mymmorpg.port.MailItemGrantPort;
 import cn.itcast.demo.mymmorpg.port.PlayerCachePort;
 import cn.itcast.demo.mymmorpg.port.PlayerDataLoadPort;
 import cn.itcast.demo.mymmorpg.port.PlayerProgressPort;
+import cn.itcast.demo.mymmorpg.port.SkinUnlockPort;
 import cn.itcast.demo.mymmorpg.protocol.MessageId; // GET_BAG_INFO/USE_ITEM 等响应 msgId
 import cn.itcast.demo.mymmorpg.protocol.ProtocolMessage; // 统一 msgId + payload
 import cn.itcast.demo.mymmorpg.protocol.RetCode; // PLAYER_NOT_SELECTED / PLAYER_NOT_FOUND
@@ -23,6 +28,8 @@ import cn.itcast.demo.mymmorpg.protocol.protobuf.BagInfo; // 背包摘要（容�
 import cn.itcast.demo.mymmorpg.protocol.protobuf.BagItemInfo; // 单格道具 Protobuf
 import cn.itcast.demo.mymmorpg.protocol.protobuf.DiscardItemCsReq; // 丢弃道具请求
 import cn.itcast.demo.mymmorpg.protocol.protobuf.DiscardItemScRsp; // 丢弃道具响应
+import cn.itcast.demo.mymmorpg.protocol.protobuf.EquipItemCsReq;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.EquipItemScRsp;
 import cn.itcast.demo.mymmorpg.protocol.protobuf.GetBagInfoCsReq; // 查背包请求
 import cn.itcast.demo.mymmorpg.protocol.protobuf.GetBagInfoScRsp; // 查背包响应，含 loading 标志
 import cn.itcast.demo.mymmorpg.protocol.protobuf.ItemEffectResult; // 使用道具效果：经验/HP/MP
@@ -31,13 +38,18 @@ import cn.itcast.demo.mymmorpg.protocol.protobuf.SellItemScRsp; // 出售道具�
 import cn.itcast.demo.mymmorpg.protocol.protobuf.SortBagCsReq; // 排序背包请求
 import cn.itcast.demo.mymmorpg.protocol.protobuf.SortBagScRsp; // 排序背包响应
 import cn.itcast.demo.mymmorpg.protocol.protobuf.ItemReward; // 活动奖励：itemId + count
+import cn.itcast.demo.mymmorpg.protocol.protobuf.UnequipItemCsReq;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.UnequipItemScRsp;
 import cn.itcast.demo.mymmorpg.protocol.protobuf.UseItemCsReq; // 使用道具请求
 import cn.itcast.demo.mymmorpg.protocol.protobuf.UseItemScRsp; // 使用道具响应
+import cn.itcast.demo.mymmorpg.repository.GrantIdempotencyRepository; // 发奖幂等表
 import cn.itcast.demo.mymmorpg.repository.PlayerBagItemRepository; // player_bag_item 表 CRUD
 import cn.itcast.demo.mymmorpg.repository.PlayerRepository; // player 表存在性校验
 import cn.itcast.demo.mymmorpg.support.ItemPolicy; // Groovy 解析道具 effectJson 得经验/HP/MP
 import com.fasterxml.jackson.databind.ObjectMapper; // bag:info:{playerId} JSON 序列化 BagInfoCache
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value; // 读取 game.player-preload.enabled 开关
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate; // bag:info:{playerId} Redis 读写
 import org.springframework.stereotype.Service; // BagFacade 与 ActivityService 注入本服务
 import org.springframework.transaction.annotation.Transactional; // 用/丢/卖/排序/发奖涉及 player_bag_item 写
@@ -46,17 +58,25 @@ import java.time.Duration; // bag:info 缓存 TTL 5 分钟
 import java.util.ArrayList; // 构建 BagItemInfo 可变列表
 import java.util.Comparator; // 背包排序比较器（kind/level/count/name）
 import java.util.List; // 背包行/道具 Protobuf 列表
+import java.util.Map;
 import java.util.Objects; // requireNonNull 防 Redis key/json 为 null
 import java.util.Optional; // findByIdAndPlayerId 可选背包行
+import java.util.UUID;
 
 @Service // 背包协议 Handler 与 ActivityItemGrantPort 发奖共用
-public class BagService implements ActivityItemGrantPort { // player_bag_item CRUD + bag:info Redis 快照
+public class BagService implements ActivityItemGrantPort, MailItemGrantPort, BagItemGrantPort, BagCommandPort {
 
     /** 默认背包容量 50 格，player_bag_item 槽位上限 */
     public static final int DEFAULT_CAPACITY = 50; // GetBagInfoScRsp.capacity 默认值
 
-    /** item_config.kind=1 表示经验类消耗品，当前仅支持使用该 kind */
-    public static final int KIND_EXP = 1; // handleUseItem 仅允许 kind=1 经验道具
+    /** item_config.kind=1 表示经验类消耗品 */
+    public static final int KIND_EXP = 1; // handleUseItem 允许 kind=1 经验道具
+
+    /** item_config.kind=2 表示可穿戴装备 */
+    public static final int KIND_EQUIP = 2;
+
+    /** item_config.kind=3 表示皮肤解锁卡（SKIN_UNLOCK） */
+    public static final int KIND_SKIN_UNLOCK = 3;
 
     /** 排序类型：按道具 kind 升序 */
     public static final int SORT_BY_KIND = 1; // SortBagCsReq.sortType=1
@@ -86,6 +106,10 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
     private final StringRedisTemplate stringRedisTemplate; // bag:info:{playerId} GET/SET/DEL
     private final ObjectMapper objectMapper; // BagInfoCache↔JSON 序列化
     private final PlayerDataLoadPort playerDataLoadPort;
+    private final SkinUnlockPort skinUnlockPort;
+    private final GrantIdempotencyRepository grantIdempotencyRepository;
+    private final ObjectProvider<EconomyLedgerService> economyLedgerService;
+    private final ObjectProvider<EquipRandomizer> equipRandomizer;
     private final boolean preloadEnabled; // game.player-preload.enabled 门控 GetBagInfo loading
 
     public BagService( // 文件维护说明
@@ -99,6 +123,10 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
             StringRedisTemplate stringRedisTemplate,
             ObjectMapper objectMapper,
             PlayerDataLoadPort playerDataLoadPort,
+            SkinUnlockPort skinUnlockPort,
+            GrantIdempotencyRepository grantIdempotencyRepository,
+            ObjectProvider<EconomyLedgerService> economyLedgerService,
+            ObjectProvider<EquipRandomizer> equipRandomizer,
             @Value("${game.player-preload.enabled:false}") boolean preloadEnabled) {
         this.playerRepository = playerRepository;
         this.bagItemRepository = bagItemRepository;
@@ -110,6 +138,10 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
         this.playerDataLoadPort = playerDataLoadPort;
+        this.skinUnlockPort = skinUnlockPort;
+        this.grantIdempotencyRepository = grantIdempotencyRepository;
+        this.economyLedgerService = economyLedgerService;
+        this.equipRandomizer = equipRandomizer;
         this.preloadEnabled = preloadEnabled;
     }
 
@@ -180,6 +212,9 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
             return useItemMsg(BagRetCode.INVALID_TARGET, itemUid, 0, null, null); // INVALID_TARGET
         }
         int kind = cfg.getKind() == null ? 0 : cfg.getKind(); // item_config.kind
+        if (kind == KIND_SKIN_UNLOCK) {
+            return useSkinUnlockItem(playerId, player, row, cfg, itemUid, useCount);
+        }
         if (kind != KIND_EXP) { // 非经验类消耗品
             return useItemMsg(BagRetCode.ITEM_UNAVAILABLE, itemUid, 0, null, null); // ITEM_UNAVAILABLE
         }
@@ -215,6 +250,25 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
         return useItemMsg(BagRetCode.OK, itemUid, useCount, hasEffect ? eff : null, null); // USE_ITEM_SC_RSP 成功
     }
 
+    /** 皮肤解锁卡：调用 SkinUnlockPort，成功后消耗道具（已拥有也消耗，幂等解锁）。 */
+    private ProtocolMessage useSkinUnlockItem(long playerId, Player player, PlayerBagItem row,
+                                              ItemConfig cfg, long itemUid, int useCount) {
+        // 皮肤卡一次使用 1 张即可完成解锁
+        int consume = Math.min(useCount, 1);
+        int unlockRc = skinUnlockPort.unlockByItem(playerId, cfg.getId());
+        if (unlockRc != RetCode.OK && unlockRc != RetCode.SKIN_ALREADY_OWNED) {
+            if (unlockRc == RetCode.SKIN_ITEM_INVALID) {
+                return useItemMsg(BagRetCode.ITEM_UNAVAILABLE, itemUid, 0, null, null);
+            }
+            return useItemMsg(RetCode.INTERNAL_ERROR, itemUid, 0, null, null);
+        }
+        consumeStack(row, consume);
+        playerCachePort.saveCacheAndMarkDirty(player);
+        itemEventPublisher.publishItemUsed(playerId, itemUid, cfg.getId(), consume);
+        evictBagInfoCache(playerId);
+        return useItemMsg(BagRetCode.OK, itemUid, consume, null, null);
+    }
+
     /** 丢弃道具：扣减数量或删除行 */
     @Transactional // player_bag_item 写操作需事务
     public ProtocolMessage handleDiscardItem(long playerId, DiscardItemCsReq req) { // 文件维护说明
@@ -227,6 +281,9 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
             return discardMsg(BagRetCode.ITEM_NOT_FOUND, itemUid, 0); // ITEM_NOT_FOUND
         }
         PlayerBagItem row = bagOpt.get(); // 目标背包行
+        if (row.isEquipped()) {
+            return discardMsg(BagRetCode.ITEM_UNAVAILABLE, itemUid, 0);
+        }
         int c = req.getCount(); // 丢弃数量
         if (c <= 0 || c > row.getCount()) { // 数量非法
             return discardMsg(BagRetCode.COUNT_NOT_ENOUGH, itemUid, 0); // COUNT_NOT_ENOUGH
@@ -293,6 +350,9 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
             return sellMsg(BagRetCode.ITEM_NOT_FOUND, itemUid, 0, 0, null); // ITEM_NOT_FOUND
         }
         PlayerBagItem row = bagOpt.get(); // 待出售背包行
+        if (row.isEquipped()) {
+            return sellMsg(BagRetCode.ITEM_UNAVAILABLE, itemUid, 0, 0, null);
+        }
         int c = req.getCount(); // 出售数量
         if (c <= 0 || c > row.getCount()) { // 数量非法
             return sellMsg(BagRetCode.COUNT_NOT_ENOUGH, itemUid, 0, 0, null); // COUNT_NOT_ENOUGH
@@ -309,7 +369,10 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
             return sellMsg(BagRetCode.SELL_PRICE_INVALID, itemUid, 0, 0, null); // SELL_PRICE_INVALID
         }
         long currency = (long) unitPrice * c; // 总金币 = 单价 × 数量
-        long newGold = (player.getGold() == null ? 0L : player.getGold()) + currency; // 累加 player.gold
+        long goldBefore = player.getGold() == null ? 0L : player.getGold();
+        long newGold = goldBefore + currency;
+        int countBefore = row.getCount() == null ? 0 : row.getCount();
+        int itemConfigId = row.getItemConfigId();
         player.setGold(newGold); // 写回 gold 字段
         playerCachePort.saveCacheAndMarkDirty(player); // 持久化 gold 并 mark dirty
         consumeStack(row, c); // 扣减背包堆叠
@@ -318,10 +381,94 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
         if (after.isPresent()) { // 行仍存在
             remaining = toProto(after.get(), cfg); // 部分出售后仍有堆叠，组装剩余槽位 protobuf 供 SellItemScRsp 展示
         }
+        int countAfter = after.map(r -> r.getCount() == null ? 0 : r.getCount()).orElse(0);
+        String sellBizNo = "sell:" + itemUid + ":" + System.currentTimeMillis();
+        EconomyLedgerService ledger = economyLedgerService.getIfAvailable();
+        if (ledger != null) {
+            ledger.recordWallet(playerId, "GOLD", currency, goldBefore, newGold,
+                    "SELL_ITEM", sellBizNo, "wallet:sell:" + sellBizNo, "player");
+            ledger.recordItem(playerId, itemConfigId, -c, countBefore, countAfter,
+                    "SELL_ITEM", sellBizNo, "item:sell:" + sellBizNo, "player");
+        }
         int gained = currency > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) currency; // 协议 int 上限截断
         itemEventPublisher.publishItemSold(playerId, itemUid, cfg.getId(), c, gained); // MQ 上报出售
         evictBagInfoCache(playerId); // DEL bag:info:{playerId}
         return sellMsg(BagRetCode.OK, itemUid, c, gained, remaining); // SELL_ITEM_SC_RSP 含获得金币
+    }
+
+    /** 穿戴装备：kind=2，effect_params 含 slot=N;atk=..;def=.. */
+    @Transactional
+    public ProtocolMessage handleEquipItem(long playerId, EquipItemCsReq req) {
+        long itemUid = req.getItemUid();
+        if (playerId <= 0) {
+            return equipRsp(RetCode.PLAYER_NOT_SELECTED, itemUid, 0, null);
+        }
+        Player player = playerCachePort.findById(playerId);
+        if (player == null) {
+            return equipRsp(RetCode.PLAYER_NOT_FOUND, itemUid, 0, null);
+        }
+        Optional<PlayerBagItem> bagOpt = bagItemRepository.findByIdAndPlayerId(itemUid, playerId);
+        if (bagOpt.isEmpty()) {
+            return equipRsp(BagRetCode.ITEM_NOT_FOUND, itemUid, 0, null);
+        }
+        PlayerBagItem row = bagOpt.get();
+        ItemConfig cfg = configQueryService.findItemById(row.getItemConfigId());
+        if (cfg == null) {
+            return equipRsp(BagRetCode.ITEM_NOT_FOUND, itemUid, 0, null);
+        }
+        if (cfg.getKind() == null || cfg.getKind() != KIND_EQUIP) {
+            return equipRsp(BagRetCode.NOT_EQUIPMENT, itemUid, 0, null);
+        }
+        int plv = player.getLevel() == null ? 1 : player.getLevel();
+        if (plv < (cfg.getLevelRequired() == null ? 0 : cfg.getLevelRequired())) {
+            return equipRsp(BagRetCode.LEVEL_NOT_ENOUGH, itemUid, 0, null);
+        }
+        int slot = parseEquipSlot(cfg.getEffectParams());
+        if (slot <= 0) {
+            slot = 1; // 默认武器槽
+        }
+        for (PlayerBagItem other : bagItemRepository.findByPlayerIdOrderBySlotIndexAsc(playerId)) {
+            if (other.getId().equals(row.getId())) {
+                continue;
+            }
+            if (other.isEquipped() && Objects.equals(other.getEquipSlot(), slot)) {
+                other.setEquipSlot(0);
+                bagItemRepository.save(other);
+            }
+        }
+        row.setEquipSlot(slot);
+        bagItemRepository.save(row);
+        applyEquipBonusesToPower(player);
+        evictBagInfoCache(playerId);
+        return equipRsp(BagRetCode.OK, itemUid, slot, bagInfoSnapshot(playerId));
+    }
+
+    /** 卸下装备 */
+    @Transactional
+    public ProtocolMessage handleUnequipItem(long playerId, UnequipItemCsReq req) {
+        int slot = req.getEquipSlot();
+        if (playerId <= 0) {
+            return unequipRsp(RetCode.PLAYER_NOT_SELECTED, slot, null);
+        }
+        Player player = playerCachePort.findById(playerId);
+        if (player == null) {
+            return unequipRsp(RetCode.PLAYER_NOT_FOUND, slot, null);
+        }
+        PlayerBagItem equipped = null;
+        for (PlayerBagItem row : bagItemRepository.findByPlayerIdOrderBySlotIndexAsc(playerId)) {
+            if (row.isEquipped() && Objects.equals(row.getEquipSlot(), slot)) {
+                equipped = row;
+                break;
+            }
+        }
+        if (equipped == null) {
+            return unequipRsp(BagRetCode.EQUIP_SLOT_EMPTY, slot, null);
+        }
+        equipped.setEquipSlot(0);
+        bagItemRepository.save(equipped);
+        applyEquipBonusesToPower(player);
+        evictBagInfoCache(playerId);
+        return unequipRsp(BagRetCode.OK, slot, bagInfoSnapshot(playerId));
     }
 
     /** 查背包全部道具并转 Protobuf（跳过配置缺失行） */
@@ -370,7 +517,7 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
 
     /** PlayerBagItem + ItemConfig → BagItemInfo Protobuf */
     private BagItemInfo toProto(PlayerBagItem row, ItemConfig cfg) { // PlayerBagItem + ItemConfig → BagItemInfo Protobuf
-        return BagItemInfo.newBuilder() // 单格道具 Protobuf
+        var b = BagItemInfo.newBuilder() // 单格道具 Protobuf
                 .setItemUid(row.getId()) // player_bag_item 主键 itemUid
                 .setItemId(cfg.getId()) // item_config.id
                 .setItemName(cfg.getName()) // 道具显示名
@@ -379,7 +526,104 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
                 .setItemKind(cfg.getKind() == null ? 0 : cfg.getKind()) // item_config.kind
                 .setLevelRequired(cfg.getLevelRequired() == null ? 0 : cfg.getLevelRequired()) // 使用等级门槛
                 .setDescription(cfg.getDescription() == null ? "" : cfg.getDescription()) // 道具描述
-                .build(); // 完成 BagItemInfo
+                .setEquipSlot(row.getEquipSlot() == null ? 0 : row.getEquipSlot());
+        int[] bonuses = parseAtkDef(cfg.getEffectParams());
+        if (bonuses[0] > 0) {
+            b.setAttackBonus(bonuses[0]);
+        }
+        if (bonuses[1] > 0) {
+            b.setDefenseBonus(bonuses[1]);
+        }
+        return b.build();
+    }
+
+    private static int parseEquipSlot(String effectParams) {
+        if (effectParams == null || effectParams.isBlank()) {
+            return 0;
+        }
+        for (String part : effectParams.split("[;,]")) {
+            String[] kv = part.trim().split("=");
+            if (kv.length == 2 && "slot".equalsIgnoreCase(kv[0].trim())) {
+                try {
+                    return Integer.parseInt(kv[1].trim());
+                } catch (NumberFormatException ignored) {
+                    return 0;
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static int[] parseAtkDef(String effectParams) {
+        int atk = 0;
+        int def = 0;
+        if (effectParams == null || effectParams.isBlank()) {
+            return new int[]{0, 0};
+        }
+        for (String part : effectParams.split("[;,]")) {
+            String[] kv = part.trim().split("=");
+            if (kv.length != 2) {
+                continue;
+            }
+            try {
+                if ("atk".equalsIgnoreCase(kv[0].trim())) {
+                    atk = Integer.parseInt(kv[1].trim());
+                } else if ("def".equalsIgnoreCase(kv[0].trim())) {
+                    def = Integer.parseInt(kv[1].trim());
+                }
+            } catch (NumberFormatException ignored) {
+                // skip
+            }
+        }
+        return new int[]{atk, def};
+    }
+
+    private void applyEquipBonusesToPower(Player player) {
+        int bonus = 0;
+        for (PlayerBagItem row : bagItemRepository.findByPlayerIdOrderBySlotIndexAsc(player.getId())) {
+            if (!row.isEquipped()) {
+                continue;
+            }
+            ItemConfig cfg = configQueryService.findItemById(row.getItemConfigId());
+            if (cfg == null) {
+                continue;
+            }
+            int[] ad = parseAtkDef(cfg.getEffectParams());
+            bonus += ad[0] + ad[1];
+        }
+        player.recalcPowerScore();
+        player.setPowerScore((player.getPowerScore() == null ? 0 : player.getPowerScore()) + bonus);
+        playerCachePort.saveCacheAndMarkDirty(player);
+    }
+
+    private BagInfo bagInfoSnapshot(long playerId) {
+        List<BagItemInfo> items = listBagItems(playerId);
+        return BagInfo.newBuilder()
+                .setCapacity(DEFAULT_CAPACITY)
+                .setUsedSlots(items.size())
+                .addAllItems(items)
+                .build();
+    }
+
+    private ProtocolMessage equipRsp(int retcode, long itemUid, int slot, BagInfo bagInfo) {
+        var b = EquipItemScRsp.newBuilder()
+                .setRetcode(retcode)
+                .setItemUid(itemUid)
+                .setEquipSlot(slot);
+        if (bagInfo != null) {
+            b.setBagInfo(bagInfo);
+        }
+        return new ProtocolMessage(MessageId.EQUIP_ITEM_SC_RSP, b.build().toByteArray());
+    }
+
+    private ProtocolMessage unequipRsp(int retcode, int slot, BagInfo bagInfo) {
+        var b = UnequipItemScRsp.newBuilder()
+                .setRetcode(retcode)
+                .setEquipSlot(slot);
+        if (bagInfo != null) {
+            b.setBagInfo(bagInfo);
+        }
+        return new ProtocolMessage(MessageId.UNEQUIP_ITEM_SC_RSP, b.build().toByteArray());
     }
 
     /** 构造 UseItemScRsp */
@@ -435,24 +679,144 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
     }
 
     /** 活动领奖发道具：ActivityService 经 ActivityItemGrantPort 调用 */
-    @Override // ActivityItemGrantPort.grantItemsForActivity 实现
-    @Transactional // 多笔 addItemCount 原子提交 player_bag_item
-    public int grantItemsForActivity(long playerId, List<ItemReward> rewards) { // 文件维护说明
-        if (playerId <= 0) { // 未选角
-            return RetCode.PLAYER_NOT_SELECTED; // 无法发奖
+    @Override
+    @Transactional
+    public int grantItemsForActivity(long playerId, String idempotencyKey, List<ItemReward> rewards) {
+        String key = (idempotencyKey == null || idempotencyKey.isBlank())
+                ? "activity:anon:" + UUID.randomUUID()
+                : idempotencyKey.trim();
+        return grantItemsIdempotent(playerId, key, rewards);
+    }
+
+    @Override
+    public int grantItemsForMail(long playerId, long mailId, List<ItemReward> rewards) {
+        return grantItemsIdempotent(playerId, "mail:" + mailId, rewards);
+    }
+
+    /**
+     * 按道具模板 ID 批量扣减（公会创建等）。数量不足返回 {@link BagRetCode#COUNT_NOT_ENOUGH}。
+     *
+     * @param costs itemId → count，需全部可扣才执行
+     */
+    @Transactional
+    public int consumeItemsByConfig(long playerId, Map<Integer, Integer> costs) {
+        if (playerId <= 0) {
+            return RetCode.PLAYER_NOT_SELECTED;
         }
-        if (playerRepository.findById(playerId).isEmpty()) { // player 不存在
-            return RetCode.PLAYER_NOT_FOUND; // 无法发奖
+        if (costs == null || costs.isEmpty()) {
+            return BagRetCode.OK;
         }
-        try { // 逐条活动奖励入库，BAG_FULL 时捕获转 retcode
-            for (ItemReward r : rewards) { // 逐条活动奖励
-                addItemCount(playerId, r.getItemId(), r.getCount(), true); // itemId+count，bind=1 活动绑定
+        for (Map.Entry<Integer, Integer> e : costs.entrySet()) {
+            int itemId = e.getKey() == null ? 0 : e.getKey();
+            int need = e.getValue() == null ? 0 : e.getValue();
+            if (itemId <= 0 || need <= 0) {
+                continue;
             }
-            evictBagInfoCache(playerId); // 背包变更清 bag:info 缓存
-            return BagRetCode.OK; // 发奖成功
-        } catch (BagFullException e) { // 50 格已满
-            return BagRetCode.BAG_FULL; // 槽位不足
+            if (sumItemCount(playerId, itemId) < need) {
+                return BagRetCode.COUNT_NOT_ENOUGH;
+            }
         }
+        for (Map.Entry<Integer, Integer> e : costs.entrySet()) {
+            int itemId = e.getKey() == null ? 0 : e.getKey();
+            int need = e.getValue() == null ? 0 : e.getValue();
+            if (itemId <= 0 || need <= 0) {
+                continue;
+            }
+            int remain = need;
+            for (PlayerBagItem row : bagItemRepository.findByPlayerIdOrderBySlotIndexAsc(playerId)) {
+                if (remain <= 0) {
+                    break;
+                }
+                if (row.getItemConfigId() == null || row.getItemConfigId() != itemId) {
+                    continue;
+                }
+                int have = row.getCount() == null ? 0 : row.getCount();
+                int take = Math.min(have, remain);
+                consumeStack(row, take);
+                remain -= take;
+            }
+            if (remain > 0) {
+                return BagRetCode.COUNT_NOT_ENOUGH;
+            }
+        }
+        evictBagInfoCache(playerId);
+        return BagRetCode.OK;
+    }
+
+    /**
+     * 商城/活动/邮件等通用发货：同一 playerId+idempotencyKey 只发一次（DB 唯一键，Redis 作短缓存）。
+     */
+    @Transactional
+    public int grantItemsIdempotent(long playerId, String idempotencyKey, List<ItemReward> rewards) {
+        if (playerId <= 0) {
+            return RetCode.PLAYER_NOT_SELECTED;
+        }
+        if (playerRepository.findById(playerId).isEmpty()) {
+            return RetCode.PLAYER_NOT_FOUND;
+        }
+        String normalizedKey = idempotencyKey == null ? "" : idempotencyKey.trim();
+        String redisKey = null;
+        if (!normalizedKey.isBlank()) {
+            if (grantIdempotencyRepository.existsByPlayerIdAndIdempotencyKey(playerId, normalizedKey)) {
+                return BagRetCode.OK;
+            }
+            redisKey = "bag:grant:idem:" + playerId + ":" + normalizedKey;
+            Boolean first = stringRedisTemplate.opsForValue().setIfAbsent(redisKey, "1", Duration.ofDays(30));
+            if (Boolean.FALSE.equals(first)) {
+                return BagRetCode.OK;
+            }
+        }
+        try {
+            if (rewards != null) {
+                int seq = 0;
+                for (ItemReward r : rewards) {
+                    int before = sumItemCount(playerId, r.getItemId());
+                    addItemCount(playerId, r.getItemId(), r.getCount(), true);
+                    int after = sumItemCount(playerId, r.getItemId());
+                    EconomyLedgerService ledger = economyLedgerService.getIfAvailable();
+                    if (ledger != null && !normalizedKey.isBlank()) {
+                        ledger.recordItem(playerId, r.getItemId(), r.getCount(), before, after,
+                                "GRANT", normalizedKey,
+                                "item:grant:" + playerId + ":" + normalizedKey + ":" + (seq++),
+                                "system");
+                    }
+                }
+            }
+            if (!normalizedKey.isBlank()) {
+                GrantIdempotency row = new GrantIdempotency();
+                row.setPlayerId(playerId);
+                row.setIdempotencyKey(normalizedKey);
+                row.setStatus("DONE");
+                row.setCreatedAt(System.currentTimeMillis());
+                try {
+                    grantIdempotencyRepository.saveAndFlush(row);
+                } catch (DataIntegrityViolationException e) {
+                    return BagRetCode.OK;
+                }
+            }
+            evictBagInfoCache(playerId);
+            return BagRetCode.OK;
+        } catch (BagFullException e) {
+            if (redisKey != null) {
+                stringRedisTemplate.delete(redisKey);
+            }
+            return BagRetCode.BAG_FULL;
+        } catch (RuntimeException e) {
+            if (redisKey != null) {
+                stringRedisTemplate.delete(redisKey);
+            }
+            throw e;
+        }
+    }
+
+    private int sumItemCount(long playerId, int itemConfigId) {
+        int total = 0;
+        for (PlayerBagItem row : bagItemRepository.findByPlayerIdOrderBySlotIndexAsc(playerId)) {
+            if (row.getItemConfigId() != null && row.getItemConfigId() == itemConfigId) {
+                total += row.getCount() == null ? 0 : row.getCount();
+            }
+        }
+        return total;
     }
 
     /** 读 bag:info:{playerId} JSON 缓存 */
@@ -565,6 +929,13 @@ public class BagService implements ActivityItemGrantPort { // player_bag_item CR
                 row.setCount(add); // 初始堆叠
                 row.setBind(bindReward ? 1 : 0); // 活动奖励 bind=1
                 row.setSlotIndex(maxSlot + 1); // 新槽位 = max+1
+                if (cfg.getKind() != null && cfg.getKind() == KIND_EQUIP) {
+                    EquipRandomizer randomizer = equipRandomizer == null ? null : equipRandomizer.getIfAvailable();
+                    if (randomizer != null) {
+                        int rarity = cfg.getLevelRequired() == null ? 3 : Math.min(5, Math.max(1, cfg.getLevelRequired() / 10));
+                        row.setAffixBlob(randomizer.toBlob(randomizer.roll(itemConfigId, rarity)));
+                    }
+                }
                 bagItemRepository.save(row); // INSERT player_bag_item
                 remaining -= add; // 减少待入库量
             }

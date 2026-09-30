@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+game:
+  internal-api:
+    enabled: false
+    secret: ${INTERNAL_API_SECRET:dev-internal-api-secret}
+  port:
+    remote:
+      enabled: ${GAME_PORT_REMOTE_ENABLED:false}

@@ -1,0 +1,4 @@
+productId,productType,name,channelSku,price,originalPrice,discountBegin,discountEnd,saleBegin,saleEnd,rewardsJson,limitType,limitCount,tags,tabId,sort,opened
+10001,DIRECT_TOPUP,60钻石,mmorpg.diamond.60,600,600,,,,,,"[{""itemId"":9001,""count"":60,""bindType"":0}]",NONE,0,diamond,topup,10,true
+20001,DISCOUNT_PACK,周末特惠礼包,mmorpg.pack.weekend,1200,3000,2026-08-01T00:00:00+08:00,2027-08-03T23:59:59+08:00,,,"[{""itemId"":9001,""count"":300,""bindType"":0},{""itemId"":8001,""count"":5,""bindType"":1}]",WEEKLY,1,weekend,discount,10,true
+30001,OTHER_PACK,首充超值礼包,mmorpg.pack.first,600,600,,,,,,"[{""itemId"":9001,""count"":120,""bindType"":0},{""itemId"":7001,""count"":1,""bindType"":1}]",LIFETIME,1,first_charge,pack,10,true

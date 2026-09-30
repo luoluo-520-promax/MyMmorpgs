@@ -18,18 +18,18 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        # 单体模式：全部转发 player-service；微服务拆分见 application-split.yml（profile=split）
         - id: player-service
           uri: lb://player-service
           predicates:
-            - Path=/player/**,/ws/**,/battle/**,/activity/**
+            - Path=/player/**,/ws/**,/battle/**,/activity/**,/api/security/**
 
 server:
   port: ${GATEWAY_PORT:8443}
   ssl:
     enabled: ${GATEWAY_SSL_ENABLED:false}
-    # 模拟 HTTPS：默认读取本地/测试证书；生产环境请改为正式证书
     key-store: ${GATEWAY_SSL_KEY_STORE:classpath:certs/gateway-keystore.p12}
-    key-store-password: ${GATEWAY_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-password: ${GATEWAY_SSL_KEY_STORE_PASSWORD:}
     key-store-type: ${GATEWAY_SSL_KEY_STORE_TYPE:PKCS12}
     key-alias: ${GATEWAY_SSL_KEY_ALIAS:gateway}
 
@@ -41,6 +41,10 @@ management:
 
 game:
   gateway:
+    region:
+      enabled: true
+      default-region: cn-east
+      default-edge-pop: pop-shanghai
     observe:
       enabled: true
       http-enabled: true
@@ -50,13 +54,10 @@ game:
     auth:
       enabled: true
       whitelist:
-        - /ws/**
-        - /player/**
-        - /actuator/**
+        - /api/security/public-key
+        - /api/security/session-key
     rate-limit:
       enabled: true
       total-per-second: 2000
       user-per-second: 30
-      whitelist:
-        - /actuator/**
-
+      whitelist: []

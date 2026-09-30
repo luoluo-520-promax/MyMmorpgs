@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="ai-service-unit">
+    <test name="ai-service-unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.aiservice.AiServiceSmokeTest"/>
+            <class name="cn.itcast.demo.mymmorpg.aiservice.AiPlatformBusinessFlowTest"/>
+        </classes>
+    </test>
+</suite>

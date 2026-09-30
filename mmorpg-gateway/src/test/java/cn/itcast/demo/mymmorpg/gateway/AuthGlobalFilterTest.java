@@ -182,6 +182,22 @@ public class AuthGlobalFilterTest {
     }
 
     @Test
+    public void whenWebSocketUpgradeWithoutToken_delegatesToChain() {
+        GatewayAuthProperties props = new GatewayAuthProperties();
+        props.setEnabled(true);
+        props.setWhitelist(List.of());
+        AuthGlobalFilter filter = new AuthGlobalFilter(redisTemplate, props, objectMapper);
+        ServerWebExchange ex = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/ws/player").header("Sec-WebSocket-Key", "abc").build());
+        when(chain.filter(ex)).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(ex, chain)).verifyComplete();
+
+        verify(chain).filter(ex);
+        verify(redisTemplate, never()).opsForValue();
+    }
+
+    @Test
     public void orderIsAuthFilterPriority() {
         int expectedOrder = -90;
         log.info("[测试开始] 场景=过滤器顺序 | 期望order={}", expectedOrder);

@@ -61,6 +61,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>mmorpg-common</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>

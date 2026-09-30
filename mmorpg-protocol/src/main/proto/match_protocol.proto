@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package mmorpg.match;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "MatchProtocolProto";
+
+message EnqueueMatchCsReq {
+  uint32 match_type = 1; // 1=dungeon 2=pvp
+  uint32 mode_id = 2;
+  // 可选：职业定位 tank/heal/dps，供互补评分
+  string preferred_role = 3;
+  // 可选：历史胜率 [0,1]；未上报时用 -1 表示忽略胜率项
+  double win_rate = 4;
+  // 可选：风格偏好（如 aggressive / defensive）
+  string style_preference = 5;
+}
+
+message EnqueueMatchScRsp {
+  int32 retcode = 1;
+  string queue_id = 2;
+  uint32 estimated_wait_sec = 3;
+}
+
+message CancelMatchCsReq {
+  string queue_id = 1;
+}
+
+message CancelMatchScRsp {
+  int32 retcode = 1;
+}
+
+message MatchStatusScNotify {
+  string queue_id = 1;
+  uint32 status = 2; // 1=queued 2=matched 3=cancelled 4=timeout
+  uint32 scene_id = 3;
+  uint32 line_id = 4;
+  repeated uint64 teammate_ids = 5;
+}

@@ -1,0 +1,63 @@
+spring:
+
+  application:
+
+    name: update-service
+
+  profiles:
+
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  cloud:
+
+    nacos:
+
+      discovery:
+
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+
+      config:
+
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+
+        enabled: ${NACOS_CONFIG_ENABLED:false}
+
+        import-check:
+
+          enabled: false
+
+        file-extension: yaml
+
+
+
+server:
+
+  port: 8993
+
+
+
+game:
+  update:
+    keep-active-versions: ${GAME_UPDATE_KEEP_ACTIVE_VERSIONS:2}
+    manifest-signing-secret: ${GAME_UPDATE_MANIFEST_SIGNING_SECRET:}
+    manifest-signing-key-id: ${GAME_UPDATE_MANIFEST_SIGNING_KEY_ID:default}
+    resource-root: ${GAME_UPDATE_RESOURCE_ROOT:./data/update-resources}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+
+
+
+management:
+
+  endpoints:
+
+    web:
+
+      exposure:
+
+        include: health,info,metrics,prometheus
+
+

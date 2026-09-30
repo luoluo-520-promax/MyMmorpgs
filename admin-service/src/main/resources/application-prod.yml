@@ -1,0 +1,35 @@
+# 生产后台鉴权样例（启动前注入环境变量，勿把真实密钥写入仓库）
+#
+# export SPRING_PROFILES_ACTIVE=prod
+# export MYSQL_PASSWORD='<strong-mysql-password>'
+# export INTERNAL_API_SECRET="$(openssl rand -hex 32)"
+# export ADMIN_HMAC_SECRET="$(openssl rand -hex 32)"
+# export ADMIN_API_KEY="$(openssl rand -hex 16)"   # 可选；CLI/脚本可用
+# export ADMIN_AUTH_ENABLED=true
+# export ADMIN_IP_WHITELIST_ENABLED=true
+#
+# 启动失败提示：
+# - 缺少 ADMIN_HMAC_SECRET / 仍为 dev-admin-hmac-secret → AdminProductionSecretsValidator 拒绝启动
+# - 缺少 INTERNAL_API_SECRET / 仍为弱默认值 → ProductionSecretsValidator 拒绝启动
+# - ADMIN_AUTH_ENABLED=false → 生产禁止关闭鉴权
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    password: ${MYSQL_PASSWORD:}
+
+admin:
+  http:
+    auth-enabled: true
+    ip-whitelist-enabled: ${ADMIN_IP_WHITELIST_ENABLED:true}
+    hmac-secret: ${ADMIN_HMAC_SECRET:}
+    api-key: ${ADMIN_API_KEY:}
+  ai:
+    enabled: ${ADMIN_AI_ENABLED:false}
+    api-key: ${ADMIN_AI_API_KEY:}
+
+game:
+  internal-api:
+    enabled: true
+    secret: ${INTERNAL_API_SECRET:}

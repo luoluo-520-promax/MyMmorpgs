@@ -16,8 +16,9 @@ public class NoOpActivityItemGrantPort implements ActivityItemGrantPort {
     private static final Logger log = LoggerFactory.getLogger(NoOpActivityItemGrantPort.class);
 
     @Override
-    public int grantItemsForActivity(long playerId, List<ItemReward> rewards) {
-        log.warn("ActivityItemGrantPort 未实现，无法发放活动奖励 playerId={} items={}", playerId, rewards.size());
+    public int grantItemsForActivity(long playerId, String idempotencyKey, List<ItemReward> rewards) {
+        log.warn("ActivityItemGrantPort 未实现，无法发放活动奖励 playerId={} key={} items={}",
+                playerId, idempotencyKey, rewards == null ? 0 : rewards.size());
         return BagRetCode.ITEM_UNAVAILABLE;
     }
 }

@@ -1,0 +1,54 @@
+[
+  {
+    "id": 9001,
+    "type": 3,
+    "opened": true,
+    "startTime": 1700000000000,
+    "endTime": 1800000000000,
+    "name": "春节集字活动",
+    "briefDesc": "集字换好礼",
+    "description": "活动期间收集福字兑换限定奖励",
+    "gameplay": "完成任务获得代币，在商店兑换道具",
+    "rules": "每档奖励仅可领取一次，需达到对应阶段",
+    "configVersion": 2,
+    "conditions": [
+      {"type": "TOKEN_MIN", "intValue": 10}
+    ],
+    "stages": [
+      {"stageIndex": 1, "name": "预热期", "description": "登录即送代币", "unlockTime": 1700000000000},
+      {"stageIndex": 2, "name": "兑换期", "description": "开放商店兑换", "unlockTime": 1701000000000}
+    ],
+    "costLimit": {
+      "costItemId": 1001,
+      "costItemCount": 1,
+      "dailyLimit": 3,
+      "totalLimit": 30,
+      "minVipLevel": 1,
+      "minPlayerLevel": 10
+    },
+    "rewardTiers": [
+      {"index": 1, "itemId": 501, "count": 5, "requiredStage": 1, "tokenAmount": 20},
+      {"index": 2, "itemId": 502, "count": 1, "requiredStage": 2, "tokenAmount": 50}
+    ],
+    "rewardMethod": 1,
+    "token": {"tokenId": 90001, "tokenName": "福字", "initialAmount": 0},
+    "shopId": 8001,
+    "shopProducts": [
+      {"productId": 1, "itemId": 601, "count": 1, "tokenCost": 100, "dailyLimit": 1}
+    ],
+    "uiResources": {
+      "bannerUrl": "assets/ui/activity/spring_banner.png",
+      "iconUrl": "assets/ui/activity/spring_icon.png",
+      "backgroundUrl": "assets/ui/activity/spring_bg.png",
+      "uiPrefabPath": "prefabs/activity/SpringPanel",
+      "resourceVersion": 2
+    },
+    "displayText": {
+      "title": "春节集字",
+      "subtitle": "集福换礼",
+      "ruleText": "详见活动规则页",
+      "buttonText": "立即参与",
+      "extras": {"tips": "每日上限3次"}
+    }
+  }
+]

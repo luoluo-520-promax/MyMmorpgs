@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package mmorpg.challenge;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "ChallengeProtocolProto";
+
+message StartChallengeCsReq {
+  uint32 challenge_id = 1;
+  uint32 challenge_type = 2;
+  uint32 lineup_id = 3;
+}
+
+message StartChallengeScRsp {
+  int32 retcode = 1;
+  uint64 challenge_uid = 2;
+  uint32 challenge_id = 3;
+  uint32 wave_count = 4;
+  uint64 battle_id = 5;
+}
+
+message FinishChallengeCsReq {
+  uint64 challenge_uid = 1;
+  bool victory = 2;
+}
+
+message FinishChallengeScRsp {
+  int32 retcode = 1;
+  uint64 challenge_uid = 2;
+  uint32 stars = 3;
+  uint32 score = 4;
+}

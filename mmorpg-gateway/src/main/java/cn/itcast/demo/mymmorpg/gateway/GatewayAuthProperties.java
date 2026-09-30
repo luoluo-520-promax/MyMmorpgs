@@ -24,7 +24,9 @@ public class GatewayAuthProperties {
      * 免认证路径 Ant 模式列表，默认仅 /ws（WebSocket 握手）。
      * 可在 yml 中追加如 /api/auth/login、/actuator/** 等。
      */
-    private List<String> whitelist = new ArrayList<>(List.of("/ws"));
+    private List<String> whitelist = new ArrayList<>(List.of(
+            "/api/security/public-key",
+            "/api/security/session-key"));
 
     /** 供 AuthGlobalFilter 读取是否启用 Token 校验 */
     public boolean isEnabled() {

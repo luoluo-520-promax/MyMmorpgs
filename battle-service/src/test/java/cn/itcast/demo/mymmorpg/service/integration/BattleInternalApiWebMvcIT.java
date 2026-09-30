@@ -33,7 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = InternalBattleController.class) // 仅加载 MVC 切片
 @ContextConfiguration(classes = BattleWebMvcTestApplication.class) // 避免 IDE 找不到 @SpringBootConfiguration
-@TestPropertySource(properties = "spring.application.name=battle-service") // 满足 Controller @ConditionalOnProperty
+@TestPropertySource(properties = {
+        "spring.application.name=battle-service",
+        "game.internal-api.enabled=false"
+})
 public class BattleInternalApiWebMvcIT extends AbstractTestNGSpringContextTests { // WebMvc 集成测试
 
     /** 模拟 HTTP 客户端 */

@@ -1,0 +1,60 @@
+98|toc 1|第十四章 协议号段与内部 API 速览	59
+260|List Bullet|API：POST .../predict/action/start|reconcile、POST .../combat/assist/device|soft-lock、POST .../build/macro/save|trigger、POST .../mutability/deterministi
+528|Normal|玩家按下闪避 → POST /predict/action/start 立即本地播动画 → 服务端 reconcile 校验；失败则 softRollback 保留位移，仅回滚伤害数字。
+535|Normal|GET /rogue/weekly-affix 拉取本周 5 词缀；通关获命运残响 POST /rogue/fate-echo/exchange 兑换定向主属性胚子。
+539|Heading 1|第十四章 协议号段与内部 API 速览
+541|Normal|内部 HTTP 前缀 /internal/**：战斗 start/action/end、活动世界事件、签到、背包 resin、大厅 coop/party/assist/home、商城 pass/对账、抽卡 probability/audit、场景 open-world、Admin /admin/**
+570|Normal|答：场景侧 InternalOpenWorldController：/predict/action/start|reconcile、/combat/assist/device|soft-lock、/build/macro/save|trigger、/mutability/deterministic、
+
+--- summary ---
+541|Normal|内部 HTTP 前缀 /internal/**：战斗 start/action/end、活动世界事件、签到、背包 resin、大厅 coop/party/assist/home、商城 pass/对账、抽卡 probability/audit、场景 open-world、Admin /admin/** 等。命令型可为 Protobuf 流；Port 型多为 JSON；大世界 P7：reaction/grapple/vehicle/mutability/coop-puzzle/chronicle/h
+585|List Bullet|生成日期：2026年08月24日（P14 体验纵深补齐；P13 体验优化；P12 性能加固；P10/P11 原地增补）
+
+--- ch10 ---
+420|Heading 2|10.1 已实现（工程可用）
+421|List Bullet|单体/微服务双模式；内部 HMAC 与生产密钥校验；Admin 导入/热更/审计/Diff/回滚/RBAC。
+422|List Bullet|Center 路由、迁移票据、分线、重连保护、AOI、动态域、无缝交接、WorldState 等大世界底座。
+423|List Bullet|元素反应、体力、词条、战令/月卡/签到、CoopRoom、队伍、助战、家园；P6：垂直移动/DoT Zone/引导链/CHAOS 诅咒/精通反应/装备强化/Boss 贡献分档与 MVP；P7：完美闪避/弹反与子弹时间、钩锁/载具、可破坏环境、捕捉驯服骑乘、多人协同解谜、编年史 global_flag、家园种植烹饪、空中冲刺/壁走、突破本、战斗指令重播。；P9 已接入门面与 Internal API（见 5.2.7）；P10 已接入（见 5.2.8）：生态亲密度、钩锁拉拽/载具战斗、地貌感电冰封、纪元拉锯、攻城与躲猫猫/竞速、制造交易所、HitStop/预表现、集群与环境 AI。
+424|List Bullet|抽卡、挑战、肉鸽、匹配分片、排行榜、邮件附件幂等发奖；P8：公会（创建/科技/远征分档/聊天 roster/会长转让）与深渊（12 间连打/星级/里程碑邮件/半月重置）；P9：命座机制覆盖、圣遗物定向锁定、专武特效触发、下落重击、水下物理、稀有精英、跟随采集、家园守卫偷菜、幻影引导、韧性/预输入、区域觉醒、世界之核；P10：生态状态机与亲密度协助、钩锁物理/载具战斗/毁崖攀爬攻击、地貌元素连锁与弹道偏转、服务器纪元与阵营拉锯、野外攻城与不对称竞技、制造树与拍卖行、命中反馈与预表现回滚、小队指挥与环境 AI。；P11：队伍元素共鸣 WORLDBUFF、传说任务状态机与区域潮汐锁、生活图鉴与资源贫瘠、指挥 MARK_TARGET/集火增伤、弹射蘑菇地形冷却、肉鸽命运卡与潮汐净化闭环。
+425|List Bullet|P12 性能加固：Actor 信箱、MoveCmd 对象池、AOI 增量与三级频次、Tick 分片、写流水线/WAL、Lua 原子世界等级升级、布隆过滤器与战斗重播冷热归档；已接入 SceneActorService、DispatchThreadModel、OpenWorldRuntimeService。
+426|List Bullet|P13 体验优化：探索罗盘/地图标记/探索度世界影响、区域滑索与攀爬歇脚、通用探索套件去角色绑定、生态叙事与环境叙事、探索正向反馈、战斗简化模式、资源自动化/灵活日常/智能养成；已接入 OpenWorldGameplayFacade、InternalOpenWorldController、MovementAdmissionService。
+427|List Bullet|P14 体验纵深补齐：客户端预测与软回滚、动量继承、确定性破坏、探索活力/神瞳共鸣、野外营地/幻影借用/助战印记、多端辅助/连招宏、周词缀与命运残响；已接入 OpenWorldGameplayFacade、InternalOpenWorldController。
+428|List Bullet|支付对账骨架、反作弊、Feign 熔断、冷热分离、TLog、CI 与质量门禁。
+429|List Bullet|智能 NPC / AI 顾问 / Boss BT / Admin AI 内容草稿。
+430|Heading 2|10.2 演示级
+431|List Bullet|部分奖励数值为演示常量；世界 BOSS grantPlans 需继续接完整履约。
+432|List Bullet|跨服场景已接 K8sSceneAllocator/HPA/Agones 清单与 SceneBackgroundPrecreator 秒切预创建。
+433|List Bullet|支付渠道为适配器骨架，官方 SDK 需替换 HTTP 占位。
+434|List Bullet|GeoIP 为粗解析；Admin Web 为静态控制台而非完整表编辑器。
+
+--- ch11.15 ---
+527|Heading 2|11.15 客户端预测到命运残响（P14）
+528|Normal|玩家按下闪避 → POST /predict/action/start 立即本地播动画 → 服务端 reconcile 校验；失败则 softRollback 保留位移，仅回滚伤害数字。
+529|Normal|攻击开窗带 playerRttMs=80 → dodgeWindowMs 从 200 动态放宽到 240；高延迟下仍跟手。
+530|Normal|滑翔取消 → TraverseMomentumService 保留 70% 水平速度；攀爬命中歇脚点 → 下次攀爬跳跃距离 +30%。
+531|Normal|砍树 → POST /mutability/deterministic 拿 seed 本地碎裂；地形蘑菇冷却命中 clientCache 无需重复发包。
+532|Normal|每日 GET /explore/vitality/daily 刷新调查点 → 完成领奖；神瞳 70% GET /explore/oculi/resonance 触发共鸣波。
+533|Normal|SAFE 区 POST /camp/establish 建 4 人营地 → 每日 /camp/sign 维护耐久；解谜失败 3 次 POST /phantom/borrow 借用好友影子。
+534|Normal|手机端 POST /combat/assist/device MOBILE → 软锁敌 ≤15°；POST /build/macro/save 配置连招，2s 内重复触发被限流。
+535|Normal|GET /rogue/weekly-affix 拉取本周 5 词缀；通关获命运残响 POST /rogue/fate-echo/exchange 兑换定向主属性胚子。
+536|Heading 1|第十三章 故障排查入门
+537|Normal|
+538|Normal|更完整步骤见 docs/troubleshooting.md；OpenAPI/Postman 见 docs/openapi.md。
+539|Heading 1|第十四章 协议号段与内部 API 速览
+
+--- table ---
+大世界顶尖标准（含 P0～P14）
+
+--- cover ---
+0|Normal|
+1|Normal|
+2|Normal|MyMmorpg
+3|Normal|大型多人在线角色扮演游戏（MMORPG）
+服务端项目全方位详细介绍文档
+4|Normal|
+5|Normal|生成日期：2026年08月24日（P14 体验纵深补齐；P13 体验优化；P12 性能加固）
+6|Normal|修订说明：在原有 P6–P12（含性能加固 Actor 信箱/对象池/AOI 增量等）基础上，新增 P13 体验优化（探索罗盘/地图标记/世界影响、区域特色移动/攀爬歇脚/通用探索套件、生态叙事/环境叙事/探索正向反馈、战斗辅助模式、资源自动化/灵活日常/智能养成），并增补 P14 体验纵深补齐（客户端预测与软回滚、立体移动动量继承、确定性破坏、探索活力/神瞳共鸣、野外营地/幻影借用/助战印记、多端辅助与连招宏、周词缀轮换/命运残响）；技术栈截至 2026-08-24。请在 Word 中全选后按 F9 更新目录。
+7|Normal|
+【重要】用 Microsoft Word 或兼容软件打开后：Ctrl+A 全选 → 按 F9 更新域，即可看到带页码的自动目录；页脚为「第 X 页 / 共 Y 页」。
+8|Normal|
+9|Heading 1|目录

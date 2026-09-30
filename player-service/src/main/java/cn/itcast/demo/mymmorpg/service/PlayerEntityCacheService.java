@@ -9,8 +9,11 @@
 package cn.itcast.demo.mymmorpg.service; // 玩家实体二级缓存（Spring Cache + 分段锁防击穿），脏标记延迟刷盘
 
 import cn.itcast.demo.mymmorpg.entity.Player;
+import cn.itcast.demo.mymmorpg.persist.DirtyFieldTracker;
+import cn.itcast.demo.mymmorpg.persist.PositionStreamWriter;
 import cn.itcast.demo.mymmorpg.port.PlayerCachePort;
 import cn.itcast.demo.mymmorpg.repository.PlayerRepository; // MySQL player 表 JPA 仓储
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.Cache; // Spring Cache 抽象，底层可为 Caffeine 或 Redis
 import org.springframework.cache.CacheManager; // 获取 entity:player 缓存区域
 import org.springframework.cache.annotation.CacheEvict; // AOP 驱逐缓存条目
@@ -55,6 +58,11 @@ public class PlayerEntityCacheService implements PlayerCachePort {
     /** 已修改但未落库的 playerId 集合，PlayerTimerPersistenceService 周期性 flush */
     private final Set<Long> dirtyPlayerIds = ConcurrentHashMap.newKeySet(); // 已修改但未落库的 playerId 集合，PlayerTimerPersistenceService 周期性 flush
 
+    /** 字段级脏标记：大世界移动只标 POSITION，避免全量刷盘 */
+    private final DirtyFieldTracker fieldTracker = new DirtyFieldTracker();
+
+    private final PositionStreamWriter positionStreamWriter;
+
     /**
      * 构造器：仓储、缓存管理器与 @Lazy 自引用。
      */
@@ -63,11 +71,24 @@ public class PlayerEntityCacheService implements PlayerCachePort {
             CacheManager cacheManager, // 获取 entity:player 缓存区域
             @Lazy // 延迟代理，避免构造期循环依赖
             PlayerEntityCacheService self) { // @Cacheable 自调用 AOP 代理
-        this.playerRepository = playerRepository; // findById/save/delete
-        this.cacheManager = cacheManager; // getCache(PLAYER_CACHE_AREA)
-        this.self = self; // loadById/putCache/evictCache 走 AOP
-        for (int i = 0; i < LOCK_SEGMENTS; i++) { // 初始化 64 把分段锁
-            locks[i] = new ReentrantLock(); // 同段 playerId 互斥防缓存击穿
+        this(playerRepository, cacheManager, self, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PlayerEntityCacheService(
+            PlayerRepository playerRepository,
+            CacheManager cacheManager,
+            @Lazy PlayerEntityCacheService self,
+            ObjectProvider<PositionStreamWriter> positionStreamWriter) {
+        this.playerRepository = playerRepository;
+        this.cacheManager = cacheManager;
+        this.self = self;
+        this.positionStreamWriter = positionStreamWriter == null
+                ? new PositionStreamWriter()
+                : (positionStreamWriter.getIfAvailable() != null
+                ? positionStreamWriter.getIfAvailable() : new PositionStreamWriter());
+        for (int i = 0; i < LOCK_SEGMENTS; i++) {
+            locks[i] = new ReentrantLock();
         }
     }
 
@@ -131,8 +152,29 @@ public class PlayerEntityCacheService implements PlayerCachePort {
         Long playerId = updated.getId(); // 脏标记主键
         if (playerId != null && playerId > 0) { // 有效 playerId
             dirtyPlayerIds.add(playerId); // 加入脏集合，定时器 flush
+            fieldTracker.mark(playerId, DirtyFieldTracker.Field.FULL);
         }
         return updated; // 含最新字段的 Player
+    }
+
+    /**
+     * 大世界移动：位置写入 Redis Stream，仅标记 POSITION 脏字段，降低 MySQL 写放大。
+     */
+    public void markPositionDirty(long playerId, int sceneId, int lineId, float x, float y, float z) {
+        if (playerId <= 0) {
+            return;
+        }
+        dirtyPlayerIds.add(playerId);
+        fieldTracker.mark(playerId, DirtyFieldTracker.Field.POSITION);
+        positionStreamWriter.append(playerId, sceneId, lineId, x, y, z, System.currentTimeMillis());
+    }
+
+    public DirtyFieldTracker fieldTracker() {
+        return fieldTracker;
+    }
+
+    public PositionStreamWriter positionStreamWriter() {
+        return positionStreamWriter;
     }
 
     /**
@@ -192,6 +234,7 @@ public class PlayerEntityCacheService implements PlayerCachePort {
         }
         playerRepository.save(player); // UPDATE player 表
         dirtyPlayerIds.remove(playerId); // flush 成功清除脏标记
+        fieldTracker.clear(playerId);
         return true; // 本次确实写库
     }
 
@@ -201,6 +244,7 @@ public class PlayerEntityCacheService implements PlayerCachePort {
     public void clearDirtyFlag(long playerId) { // 登出 stopPlayerTimer 在 flush 后清除脏标记，防止重复写库
         if (playerId > 0) { // 有效 playerId
             dirtyPlayerIds.remove(playerId); // 登出后不再 flush
+            fieldTracker.clear(playerId);
         }
     }
 

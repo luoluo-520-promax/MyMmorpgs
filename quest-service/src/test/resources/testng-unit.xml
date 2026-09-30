@@ -1,0 +1,12 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="quest-service-unit">
+    <test name="quest-unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.QuestServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.QuestBattleProgressServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.QuestProgressEventFlowTest"/>
+            <class name="cn.itcast.demo.mymmorpg.quest.QuestConfigServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.quest.QuestGraphAndConditionFlowTest"/>
+        </classes>
+    </test>
+</suite>

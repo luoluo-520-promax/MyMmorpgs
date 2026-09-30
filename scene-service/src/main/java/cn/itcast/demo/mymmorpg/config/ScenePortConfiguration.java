@@ -15,12 +15,14 @@ import org.springframework.context.annotation.Configuration; // 声明配置类
 @ConditionalOnProperty(name = "spring.application.name", havingValue = "scene-service") // 与 SceneServiceApplication 相同条件，防止 player-service 重复注册 NoOp Bean
 public class ScenePortConfiguration {
     /** 注册 PlayerCachePort Bean：scene-service 独立部署时 findById 恒返回 null */
-    @Bean // 注册 PlayerCachePort Bean；player-service 聚合部署时会用自己的真实实现覆盖
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerCachePort playerCachePort() {
         return new NoOpPlayerCachePort(); // 独立 scene-service 无 player 表连接，进场景需由上游网关注入真实 Port 或走 RPC
     }
     /** 注册 PlayerNotificationPort Bean：scene-service 独立部署时 send/unbind 为空操作 */
-    @Bean // 注册 PlayerNotificationPort Bean
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerNotificationPort playerNotificationPort() {
         return new NoOpPlayerNotificationPort(); // 独立部署时 SYNC notify 不会下发，需 player-service 提供真实 WebSocket 绑定
     }

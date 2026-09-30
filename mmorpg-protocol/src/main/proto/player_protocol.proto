@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package mmorpg;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "PlayerProtocolProto";
+
+message AccountLoginCsReq {
+  string account_name = 1;
+  string password = 2;
+  // 设备唯一标识（同一物理设备重连应保持不变）
+  string device_id = 3;
+  // 客户端类型：PC / MOBILE / CONSOLE / WEB 等
+  string client_type = 4;
+  // 可选：客户端上报 IP（网关可覆盖）
+  string client_ip = 5;
+  // 可选：User-Agent，供弱校验
+  string user_agent = 6;
+  // 设备指纹（可与 device_id 相同；空则完整性检测降分）
+  string device_fingerprint = 7;
+  // 客户端安全标志：rooted / hooked / tamperedSignature / debuggerAttached / emulator
+  map<string, bool> integrity_flags = 8;
+  // 客户端数值版本号，用于 MIN/OPTIONAL 版本治理
+  uint64 client_version_number = 9;
+  string client_version = 10;
+  // 客户端 Protobuf Schema Hash，用于协议兼容门控
+  string protocol_schema_hash = 11;
+}
+
+message PlayerProfile {
+  uint64 player_id = 1;
+  string player_name = 2;
+  uint32 level = 3;
+}
+
+message AccountLoginScRsp {
+  int32 retcode = 1;
+  uint64 account_id = 2;
+  repeated PlayerProfile player_list = 3;
+  // 登录令牌：用于后续跨服/功能鉴权（多端策略下可并存多票）。
+  string token = 4;
+  // 1=需要邮箱等二次验证（风控触发）
+  bool need_second_auth = 5;
+  // 票据建议刷新截止时间（epoch ms）；客户端可在过半时请求 RENEW_TICKET
+  uint64 token_expire_at = 6;
+  // 客户端版本低于 OPTIONAL_CLIENT_VERSION 时建议更新（仍允许登录）
+  bool recommend_client_update = 7;
+}
+
+message SelectPlayerCsReq {
+  uint64 account_id = 1;
+  uint64 player_id = 2;
+}
+
+message PlayerInfo {
+  uint64 player_id = 1;
+  string player_name = 2;
+  uint32 level = 3;
+  uint32 vip_right = 4;
+  uint64 server_time = 5;
+}
+
+message SelectPlayerScRsp {
+  int32 retcode = 1;
+  PlayerInfo player_info = 2;
+}
+
+message PlayerLogoutCsReq {
+  uint32 reason = 1;
+}
+
+message PlayerLogoutScRsp {
+  int32 retcode = 1;
+}
+
+message CreatePlayerCsReq {
+  uint64 account_id = 1;
+  string player_name = 2;
+}
+
+message CreatePlayerScRsp {
+  int32 retcode = 1;
+  PlayerProfile player = 2;
+}
+
+message GetCharacterInfoCsReq {}
+
+message GetCharacterInfoScRsp {
+  int32 retcode = 1;
+  uint64 player_id = 2;
+  string player_name = 3;
+  uint32 level = 4;
+  uint64 exp = 5;
+  uint64 gold = 6;
+  uint32 strength = 7;
+  uint32 agility = 8;
+  uint32 intelligence = 9;
+  uint32 talent_points = 10;
+  uint32 power_score = 11;
+  map<uint32, uint32> talent_levels = 12; // talentId -> level
+}
+
+message AllocateTalentCsReq {
+  uint32 talent_id = 1;
+  uint32 points = 2;
+}
+
+message AllocateTalentScRsp {
+  int32 retcode = 1;
+  uint32 talent_id = 2;
+  uint32 talent_level = 3;
+  uint32 remaining_points = 4;
+  uint32 power_score = 5;
+}
+
+message SpendGoldCsReq {
+  uint32 amount = 1;
+  string reason = 2;
+}
+
+message SpendGoldScRsp {
+  int32 retcode = 1;
+  uint64 gold_remaining = 2;
+}
+
+// ---------- 15 踢线通知（服务端主动推送） ----------
+
+message KickPlayerScNotify {
+  // 1=重复登录 2=运维强制 3=令牌失效 4=账号封禁 5=角色封禁 6=踢最老会话
+  int32 reason = 1;
+  string message = 2;
+}
+
+// ---------- 16/17 票据刷新（长期在线防过期） ----------
+
+message RenewTicketCsReq {
+  string token = 1;
+  string device_id = 2;
+}
+
+message RenewTicketScRsp {
+  int32 retcode = 1;
+  string token = 2;
+  uint64 token_expire_at = 3;
+}

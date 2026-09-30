@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.SpringApplication; // Spring Boot 应用启动器
 import org.springframework.boot.autoconfigure.SpringBootApplication; // 自动配置与组件扫描
 import org.springframework.cloud.openfeign.EnableFeignClients; // 启用 Feign 远程调用
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 活动微服务启动类。
@@ -19,6 +20,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients; // 启用 Feign �
 @ConditionalOnProperty(name = "spring.application.name", havingValue = "activity-service")
 @SpringBootApplication(scanBasePackages = "cn.itcast.demo.mymmorpg") // 扫描整个 mmorpg 公共包
 @EnableFeignClients(basePackages = "cn.itcast.demo.mymmorpg") // 启用 Feign 客户端（如背包、玩家通知等）
+@EnableScheduling
 public class ActivityServiceApplication { // 活动服务入口
 
     /**

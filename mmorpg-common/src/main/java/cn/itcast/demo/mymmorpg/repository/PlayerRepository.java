@@ -37,4 +37,12 @@ public interface PlayerRepository extends JpaRepository<Player, Long> { // 主�
      * @return 匹配则返回角色实体，否则 empty
      */
     Optional<Player> findByIdAndAccountId(Long playerId, Long accountId); // WHERE id = ? AND account_id = ?
+
+    boolean existsByName(String name);
+
+    long countByAccountId(Long accountId);
+
+    List<Player> findTop50ByOrderByLevelDesc();
+
+    List<Player> findTop50ByOrderByPowerScoreDesc();
 }

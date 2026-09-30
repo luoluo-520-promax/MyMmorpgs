@@ -39,6 +39,18 @@ public class PlayerBagItem {
     @Column(name = "slot_index", nullable = false) // 背包槽位索引
     private Integer slotIndex = 0; // 槽位序号
 
+    /** 0=未穿戴；>0 表示装备槽位（1武器 2头盔 3胸甲 4鞋子 等） */
+    @Column(name = "equip_slot", nullable = false)
+    private Integer equipSlot = 0;
+
+    /** 装备随机主/副词条 JSON BLOB（EquipRandomizer 生成） */
+    @Column(name = "affix_blob", columnDefinition = "BLOB")
+    private byte[] affixBlob;
+
+    /** 套装 ID 预留（本轮不匹配） */
+    @Column(name = "suit_id", nullable = false)
+    private Integer suitId = 0;
+
     public Long getId() { // 获取主键
         return id; // 返回主键值
     }
@@ -85,6 +97,34 @@ public class PlayerBagItem {
 
     public void setSlotIndex(Integer slotIndex) { // 设置槽位索引
         this.slotIndex = slotIndex; // 赋值槽位
+    }
+
+    public Integer getEquipSlot() {
+        return equipSlot;
+    }
+
+    public void setEquipSlot(Integer equipSlot) {
+        this.equipSlot = equipSlot;
+    }
+
+    public boolean isEquipped() {
+        return equipSlot != null && equipSlot > 0;
+    }
+
+    public byte[] getAffixBlob() {
+        return affixBlob;
+    }
+
+    public void setAffixBlob(byte[] affixBlob) {
+        this.affixBlob = affixBlob;
+    }
+
+    public Integer getSuitId() {
+        return suitId;
+    }
+
+    public void setSuitId(Integer suitId) {
+        this.suitId = suitId == null ? 0 : suitId;
     }
 
     public boolean isBound() { // 是否已绑定

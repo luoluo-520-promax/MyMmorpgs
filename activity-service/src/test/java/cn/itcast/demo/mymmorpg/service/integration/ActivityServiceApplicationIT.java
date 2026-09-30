@@ -8,7 +8,7 @@
  */
 package cn.itcast.demo.mymmorpg.service.integration;
 
-import cn.itcast.demo.mymmorpg.service.integration.support.RedisTestContainerHolder; // 测试 Redis 生命周期
+import cn.itcast.demo.mymmorpg.test.support.RedisTestContainerHolder;
 import cn.itcast.demo.mymmorpg.service.ActivityServiceApplication; // 活动服务主类
 import org.springframework.beans.factory.annotation.Autowired; // 注入 TestRestTemplate
 import org.springframework.boot.test.context.SpringBootTest; // 全上下文启动
@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 断言
                 "spring.datasource.username=sa", // H2 默认用户名
                 "spring.datasource.password=", // H2 空密码
                 "spring.jpa.hibernate.ddl-auto=create-drop", // 测试结束删表
+                "spring.flyway.enabled=false",
                 "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect", // H2 方言
                 "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", // Hibernate 方言
                 "rocketmq.enabled=false", // 关闭 RocketMQ

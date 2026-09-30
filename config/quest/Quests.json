@@ -1,0 +1,34 @@
+{
+  "quests": [
+    {
+      "questId": 1001,
+      "name": "初入世界",
+      "description": "完成新手引导",
+      "questType": 1,
+      "target": 1,
+      "expReward": 100,
+      "goldReward": 50,
+      "completeOnAccept": true
+    },
+    {
+      "questId": 1002,
+      "name": "日常巡逻",
+      "description": "完成日常巡逻目标",
+      "questType": 3,
+      "target": 3,
+      "expReward": 50,
+      "goldReward": 20,
+      "completeOnAccept": false
+    },
+    {
+      "questId": 2001,
+      "name": "拜访NPC",
+      "description": "拜访指定 NPC",
+      "questType": 2,
+      "target": 1,
+      "expReward": 80,
+      "goldReward": 30,
+      "completeOnAccept": false
+    }
+  ]
+}

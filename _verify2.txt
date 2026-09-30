@@ -1,0 +1,36 @@
+248|Normal|战斗辅助：CombatAssistService 经典/简化模式（自动连招、伤害预警、低血量时间缓速、增强 HitStop）。
+249|Normal|长线减负：ResourceAutomationService 自动矿机/农场；FlexibleDailyQuestService 多路径日常+一键领取；BuildRecommendationService 养成方案推荐与一键配置。
+250|List Bullet|API：GET .../compass/status、POST .../compass/probe、GET .../map/markers、GET .../explore/world-impact、POST .../traverse/regional/use、POST .../traverse/universal/grant-kit、POST .../combat/assist/mode、POST .../automation/*、POST .../daily/*、GET .../build/recommend。
+251|List Bullet|测试：OpenWorldP13FlowTest、OpenWorldP13EdgeCaseTest、OpenWorldP13BusinessFlowTest；权威 docs/open-world-top-tier.md P13。
+252|Heading 3|3.2.9 体验纵深补齐（P14）
+253|Normal|操控粘滞感：ClientPredictedActionService 按下即播动画/位移；ServerShadowService 维护 500ms 位置快照；ReactionValidator.dynamicDodgeWindowMs = BaseWindow + RTT×0.5；PrePlaybackService 软回滚仅撤伤害/冷却，保留位移与动画（rubberBand=false）。
+254|Normal|Z 轴衔接：SceneMoveCmd 增加 inheritedVelocity；TraverseMomentumService 滑翔→下落保留 70% 水平速度，钩锁摆荡派生攻击伤害系数；ClimbRestPointService 歇脚后攀爬跳跃 +30%；PoiseService 区分 POISE_ARMOR（可削韧）与 DODGE_IFRAME（闪避无敌帧）。
+255|Normal|破坏即时反馈：DeterministicMutationService 下发 seed+timestamp 本地演算碎片；乐观地貌改写失败 1s 平滑回滚；TerrainInteractionTracker.clientCacheCheck 本地 terrain:cooldown:cache 减少重复请求。
+256|Normal|探索惊喜：ExplorationVitalityService 每日随机调查点（叙事纸条+圣遗物碎片）；EcoMigrationScheduler 高探索度区域生物迁往相邻区；OculiResonanceService 神瞳收集 70% 触发 5 秒共鸣波提示剩余范围。
+257|Normal|社交沉淀：CoopCampService 4 人 SAFE 区野外营地（烹饪锅/合成台/传送点，每日签到维护耐久）；PhantomBorrowService 解谜失败 3 次可借用好友操作影子；SocialTokenService 助战印记兑换限定外观。
+258|Normal|多端适配：CombatAssistService.DeviceType（MOBILE +30ms 闪避窗/+15% 钩锁吸附；PC +5% 掉落）；软锁敌修正 ≤15°；BuildRecommendationService 连招宏 3 槽、触发间隔 ≥2s。
+259|Normal|终局变量：AffixShuffleService 每周从 20 种词缀抽 5 种；RogueFateCardService.exchangeFateEcho 命运残响兑换圣遗物胚子；区域净化至 SAFE 后 Boss 狂暴觉醒（血量+20%/攻速+10%）。
+260|List Bullet|API：POST .../predict/action/start|reconcile、POST .../combat/assist/device|soft-lock、POST .../build/macro/save|trigger、POST .../mutability/deterministic、GET .../explore/vitality/daily、GET .../explore/oculi/resonance、POST .../camp/establish|sign、POST .../phantom/borrow、POST .../social/token/grant、GET .../rogue/weekly-affix、POST .../rogue/fate-echo/exchange；reaction/open-window 支持 playerRttMs。
+261|List Bullet|测试：OpenWorldP14FlowTest、OpenWorldP14EdgeCaseTest（common）；OpenWorldP14BusinessFlowTest（scene Internal API 全链路）；权威 docs/open-world-top-tier.md P14。
+262|List Bullet|皮肤衣柜与穿戴（协议号段约 12xx）。
+263|List Bullet|【P8 深渊】并入 battle-service：固定 3 层×4 间=12 间连打；会话 Redis abyss:session:{playerId}（血量/能量/技能 CD 不重置）；星级 Redis abyss:stars:{playerId}；剩时≥60s→3星 / ≥30s→2星 / 通关→1星；累计 9/12/15 星经大厅系统邮件发原石与圣遗物碎片；每月 1/16 日 5:00 重置；渊月祝福 CHARGE_ATTACK+30%；配置 abyss_floor_config.json 可热更。
+264|Heading 2|3.4 社交与轻社交
+
+348|List Bullet|战斗：CombatAssistService（CLASSIC/SIMPLIFIED + HitFeedbackService 增强反馈）。
+349|List Bullet|减负：ResourceAutomationService、FlexibleDailyQuestService、BuildRecommendationService。
+350|List Bullet|测试：OpenWorldP13FlowTest / OpenWorldP13EdgeCaseTest（common）；OpenWorldP13BusinessFlowTest（scene Internal API 全链路）。
+351|Heading 3|5.2.12 P14 体验纵深补齐（手感延迟 / 立体惯性 / 破坏反馈 / 探索惊喜 / 社交沉淀 / 多端适配 / 终局变量）
+352|Normal|代码详见 docs/open-world-top-tier.md P14 节；门面 OpenWorldGameplayFacade；GET /gameplay/status 返回 p14 快照（clientPredict、serverShadowWindowMs、weeklyAffixCount 等）。
+353|List Bullet|手感：ClientPredictedActionService、ServerShadowService、ReactionValidator.dynamicDodgeWindowMs、PrePlaybackService 软回滚；SnapshotBuffer 已迁至 mmorpg-common。
+354|List Bullet|移动：SceneMoveCmd.inheritedVelocity*、TraverseMomentumService、ClimbRestPointService 攀爬跳加成、PoiseService 霸体/无敌帧分层。
+355|List Bullet|破坏：DeterministicMutationService、WorldMutabilityService.TerrainInteractionTracker.clientCacheCheck。
+356|List Bullet|探索：ExplorationVitalityService、EcoMigrationScheduler、OculiResonanceService。
+357|List Bullet|社交：CoopCampService、PhantomBorrowService、SocialTokenService。
+358|List Bullet|多端：CombatAssistService.DeviceType + resolveSoftLock；BuildRecommendationService 连招宏。
+359|List Bullet|终局：AffixShuffleService、RogueFateCardService.exchangeFateEcho、Boss 狂暴觉醒闭环。
+360|List Bullet|测试：OpenWorldP14FlowTest / OpenWorldP14EdgeCaseTest（common）；OpenWorldP14BusinessFlowTest（scene）；LagCompensationFlowTest / SnapshotBufferTest 回归。
+361|Heading 2|5.4 背包、体力、词条与发奖幂等
+
+docs/open-world-top-tier.md | 大世界顶尖标准（含 P0～P11）
+修订说明：在原有 P6–P12（含性能加固 Actor 信箱/对象池/AOI 增量等）基础上，新增 P13 体验优化（探索罗盘/地图标记/世界影响、区域特色移动/攀爬歇脚/通用探索套件、生态叙事/环境叙事/探索正向反馈、战斗辅助模式、资源自动化/灵活日常/智能养成），并增补 P14 体验纵深补齐（客户端预测与软回滚、立体移动动量继承、确定性破坏、探索活力/神瞳共鸣、野外营地/幻影借用/助战印记、多端辅助与连招宏、周词缀轮换/命运残响）；技术栈截至 2026-08-24。请在 Word 中全选后按 F9 更新目录。
+生成日期：2026年08月24日（P14 体验纵深补齐；P13 体验优化；P12 性能加固；P10/P11 原地增补）

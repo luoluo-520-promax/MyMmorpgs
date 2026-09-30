@@ -1,0 +1,60 @@
+539|Heading 1|第十四章 协议号段与内部 API 速览
+540|Normal|游戏消息用数字消息号区分玩法。常见号段印象：皮肤约 12xx、挑战约 13xx、抽卡约 14xx、肉鸽约 15xx；场景传送重定向 retcode=27；ResumeScene 约 120/121。精确以 mmorpg-protocol 为准。
+541|Normal|内部 HTTP 前缀 /internal/**：战斗 start/action/end、活动世界事件、签到、背包 resin、大厅 coop/party/assist/home、商城 pass/对账、抽卡 probability/audit、场景 open-world、Admin /admin/** 等。命令型可为 Protobuf 流；Port 型多为 JSON；大世界 P7：reaction/grapple/vehicle/mutability/coop-puzzle/chronicle/homeland/ascension/replay；战斗 reaction/replay。；公会 /internal/guild/** 与 /internal/chat/guild/**；深渊 /internal/battle/abyss/**；大厅系统发信 /internal/hall/mails/send；背包扣费 /internal/bag/consume。；P9 大世界：/constellation/unlock、/skill/cast-resolve、/fall-attack/validate、/underwater/*、/rare-elite/kill、/creature/follow-harvest、/homeland/guard|steal、/phantom/puzzle-fail、/poise/hit、/input-buffer/*、/region/awaken、/world-core/*；背包 /internal/bag/relic/lock|/relic/enhance。；P10 大世界：/ecosystem/*、/affinity/*、/grapple/pull-enemy|swing-kick、/vehicle/cast-skill|poise-hit、/climb/attack、/terrain/*、/projectile/swirl、/epoch/*、/faction/*、/cutscene/evaluate、/siege/*、/asymmetric/*、/craft/*、/auction/*、/hit-feedback、/pre-playback/*、/squad/command、/env-ai/pickup。协议：2090 HitFeedback、2200 CreatureAlert、2210 GrapplePull、2220 VehicleCast、2400 ForcedCutscene。；P13：/compass/*、/map/markers、/explore/world-impact、/traverse/regional/*、/traverse/universal/*、/eco/narrative/evaluate、/env/story/inspect、/explore/feedback、/combat/assist/*、/automation/*、/daily/*、/build/*；P14：/predict/action/*、/combat/assist/device|soft-lock、/build/macro/*、/mutability/deterministic、/explore/vitality/*、/explore/oculi/resonance、/camp/*、/phantom/borrow、/social/token/grant、/rogue/weekly-affix、/rogue/fate-echo/exchange；reaction/open-window 支持 playerRttMs。
+542|Heading 1|第十五章 常见问题 FAQ
+543|Heading 2|Q1：没有编程基础能看懂吗？
+544|Normal|可以。先读第 1～3 章与业务故事，把服务当城市部门；建立直觉后再深入技术章。
+545|Heading 2|Q2：这是已上线的商业游戏吗？
+546|Normal|是完整度较高的服务端工程底座与示例。部分数值与结算仍是演示级；商业上线还需内容、合规、运维与更严压测。
+547|Heading 2|Q3：单体还是微服务？
+548|Normal|学习与本机演示优先单体；需要独立扩容与多人分工再开远程开关。
+549|Heading 2|Q4：没有客户端怎么办？
+550|Normal|可起服务看健康检查与日志；完整玩法通常需客户端或协议调试工具。仓库侧重服务端。
+551|Heading 2|Q5：目录和页码不显示？
+552|Normal|用 Word 打开，Ctrl+A 后按 F9，或右键目录「更新域」。WPS 一般也支持。
+553|Heading 2|Q6：数据会丢吗？
+554|Normal|持久数据在 MySQL，热点在 Redis；发奖与支付强调幂等与账本。仍需正规备份，示例不能替代完整容灾。
+555|Heading 2|Q7：如何导入活动配置？
+556|Normal|可用 Admin 接口或 mmorpg-cli：import activity / import manifest，配合 API Key 或 HMAC。
+557|Normal|可用 Admin/脚本热更 battle 侧 abyss_floor_config.json（POST /internal/battle/abyss/config/reload）；公会科技与远征参数当前为服务内定稿常量，DDL 已在 guild_db 预留持久化。
+558|Heading 2|Q8：如何配置深渊/公会？
+559|Heading 1|第十六章 名词小词典
+560|Heading 2|Q9：P9 命座/圣遗物/下落攻击如何联调？
+561|Normal|场景侧用 InternalOpenWorldController 对应 POST；背包侧 POST /internal/bag/relic/lock 后 enhance；回归套件：OpenWorldP9BusinessFlowTest（API 全链路）、OpenWorldP9FlowTest / EdgeCaseTest、RelicLockEnhanceTest。协议常量见 MessageId 1210–1212 与 212–219。
+562|Heading 2|Q10：P10 生态/钩锁载具/纪元攻城/交易所如何联调？
+563|Normal|场景侧统一走 InternalOpenWorldController 的 P10 POST（见 5.2.8）；回归套件：OpenWorldP10BusinessFlowTest（API 全链路）、OpenWorldP10FlowTest / OpenWorldP10EdgeCaseTest。协议常量见 MessageId 2090、2200、2210–2221、2400。权威说明 docs/open-world-top-tier.md（P10）。
+564|Heading 2|Q11：P11 共鸣/传说/图鉴/标记/地形/肉鸽如何联调？
+565|Heading 2|Q12：P12 性能指标与压测怎么看？
+566|Heading 2|Q13：P13 探索罗盘/辅助战斗/日常减负如何联调？
+567|Normal|答：场景侧 InternalOpenWorldController：/compass/*、/map/markers、/explore/world-impact、/traverse/regional/*、/traverse/universal/*、/combat/assist/*、/automation/*、/daily/*、/build/*。GET /gameplay/status?playerId=&regionId= 一次拉取 P13 状态。回归：mvn -pl mmorpg-common,scene-service test -Dtest=OpenWorldP13*。权威说明 docs/open-world-top-tier.md（P13）。
+568|Normal|答：GET /internal/scene/open-world/metrics/performance 查看聚合指标；移动热路径已接 MoveCmdPool + AoiDeltaEncoder；mvn -pl mmorpg-common,scene-service test -Dtest=PerformanceHardening* 跑回归。
+569|Heading 2|Q14：P14 客户端预测/多端辅助/探索活力/肉鸽词缀如何联调？
+570|Normal|答：场景侧 InternalOpenWorldController：/predict/action/start|reconcile、/combat/assist/device|soft-lock、/build/macro/save|trigger、/mutability/deterministic、/explore/vitality/daily|complete、/explore/oculi/resonance、/camp/establish|sign、/phantom/borrow、/social/token/grant、/rogue/weekly-affix、/rogue/fate-echo/exchange。回归：mvn -pl mmorpg-common,scene-service test "-Dtest=OpenWorldP14*"。权威说明 docs/open-world-top-tier.md（P14）。
+571|Normal|场景侧走 InternalOpenWorldController：/team/resonance/refresh、/story/instance/*、/handbook/*、/squad/quick-mark、/move/admit（BOUNCE+regionId/terrainCell）、/rogue/start|settle。回归套件：OpenWorldP11BusinessFlowTest（scene API 全链路）、OpenWorldP11FlowTest / OpenWorldP11EdgeCaseTest / OpenWorldP11BusinessFlowTest（common）。协议：MessageId 2230/2231/2450；RetCode.TERRAIN_EXHAUSTED=170。权威说明 docs/open-world-top-tier.md（P11）。
+572|Normal|【P11 队伍共鸣 / 传说状态机 / 图鉴负反馈 / 指挥标记 / 地形冷却 / 肉鸽命运卡】TeamCompositionService：4 人队元素组合计算 ElementResonance（双火+25%攻击、双水+生命上限等），以战斗期 WorldBuff 注入，POST .../team/resonance/refresh 返回 resonance_id 与 attribute_modifiers；StoryStateMachine（Idle→Talking→Escort→Combat→Reward）+ InstanceRegionLockService（任务期锁定区域潮汐，跳过 tickDecay），MsgId 2450 STORY_INSTANCE_START 下发带选项对话，选项回写个人编年史不影响全服；HandbookService（Redis 语义 handbook:{playerId}）首次发现奖励、收集≥80% 邮件发「图鉴收集者」名片，过度采集触发 RegionImpactService.applyResourceBarren（24h 产出↓，非伤害）；SquadCommanderService.quickMark（MsgId 2230/2231 MARK_TARGET）队长锁定目标全队 AOI 广播，集火部位伤+15%/5s（SiegeWarService.armFocusFire）；WorldMutabilityService.TerrainInteractionTracker（terrain:cooldown:{region}:{x}:{y}），BOUNCE/风场 admit 校验，耗尽返回 RetCode.TERRAIN_EXHAUSTED=170 且不扣体力；RogueFateCardService：开局读区域探索度≥60% 与最高亲密度生物注入命运卡/抗性，通关增加潮汐净化值加速 CHAOS→SAFE。测试：OpenWorldP11FlowTest / OpenWorldP11EdgeCaseTest / OpenWorldP11BusinessFlowTest（common + scene）。
+573|Normal|
+574|Heading 1|第十七章 仓库文档地图
+
+--- conclusion ---
+112|toc 1|第十八章 总结	66
+559|Heading 1|第十六章 名词小词典
+574|Heading 1|第十七章 仓库文档地图
+576|Heading 1|第十八章 总结
+580|Heading 1|附录 A 服务端口速查
+582|Heading 1|附录 B 微服务远程开关速查
+584|Heading 1|附录 C 文档信息
+575|Normal|
+576|Heading 1|第十八章 总结
+577|Normal|它覆盖玩家入口、大世界（含 P5～P14
+578|Normal|请记住三句话：第一，客户端负责表现，服务器负责裁决与记账；第二，可以先合署办公（单体），再分局扩容（微服务）；第三，发奖与支付必须以幂等、验签、对账为底线——这是信任的基础。
+579|Normal|学生可用本文作课程设计说明骨架；转行者可作读源码导航；管理者可据此评估完整度与后续投入重点。
+580|Heading 1|附录 A 服务端口速查
+581|Normal|player 8989；scene 8981；chat 8982；bag 8983；skill 8984；admin 8985；hall 8986；quest 8987；matchmaking 8988；shop 8990；battle 8991（含深渊 abyss）；activity 8992；update 8993；gacha 8994；guild-service 8998；gateway 8443（可配置）；HomelandService 可拆独立微服务建议端口 8997（当前逻辑合入 scene/common）；AuctionHouseService / 制造交易逻辑可拆 trade-service 建议端口 8999（当前合入 scene/common）。
+582|Heading 1|附录 B 微服务远程开关速查
+583|Normal|GAME_SCENE/CHAT/BAG/SKILL/HALL/QUEST/MATCH/BATTLE/ACTIVITY/UPDATE/SHOP/GACHA_REMOTE_ENABLED=true；域服务 GAME_PORT_REMOTE_ENABLED=true 与 PLAYER_SERVICE_URL 等基址。详见 DEPLOYMENT.md。
+584|Heading 1|附录 C 文档信息
+585|List Bullet|生成日期：2026年08月24日（P14 体验纵深补齐；P13 体验优化；P12 性能加固；P10/P11 原地增补）
+586|List Bullet|语言：简体中文
+587|List Bullet|目标：面向所有人的全方位介绍，兼顾技术准确性
+588|List Bullet|排版：自动目录域 + 页脚「第 X 页 / 共 Y 页」
+589|List Bullet|输出路径：C:\Users\ASUS\Desktop\MyMmorpg项目全方位详细介绍文档.docx

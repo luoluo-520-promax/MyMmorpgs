@@ -413,11 +413,23 @@ public class ChatService { // handleSendChat 602 主入口，603 notify 按频�
 
     /** 管理/公会系统：绑定玩家到公会，维护 roster SET */
     public void setPlayerGuild(long playerId, String guildId) { // 管理/公会系统：绑定玩家到公会，维护 roster SET
+        String oldGuild = stringRedisTemplate.opsForValue().get(REDIS_PLAYER_GUILD + playerId);
+        if (oldGuild != null && !oldGuild.isBlank()) {
+            stringRedisTemplate.opsForSet().remove(REDIS_GUILD_ROSTER + oldGuild, String.valueOf(playerId));
+        }
         if (guildId == null || guildId.isBlank()) { // 退公会
             stringRedisTemplate.delete(REDIS_PLAYER_GUILD + playerId); // DEL chat:player:guild:{playerId}
             return; // 不再维护 roster
         }
         stringRedisTemplate.opsForValue().set(REDIS_PLAYER_GUILD + playerId, Objects.requireNonNull(guildId)); // SET chat:player:guild:{playerId} = guildId
         stringRedisTemplate.opsForSet().add(REDIS_GUILD_ROSTER + guildId, String.valueOf(playerId)); // SADD chat:guild:roster:{guildId}
+    }
+
+    /** 公会创建后初始化聊天侧 channel 元数据键（roster 仍由成员加入维护）。 */
+    public void onGuildCreated(String guildId) {
+        if (guildId == null || guildId.isBlank()) {
+            return;
+        }
+        stringRedisTemplate.opsForValue().set("chat:guild:" + guildId, "1");
     }
 }

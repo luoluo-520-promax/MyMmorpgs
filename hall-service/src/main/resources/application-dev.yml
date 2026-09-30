@@ -1,0 +1,14 @@
+# 统一开发约定：
+# - game.internal-api.enabled=false：跳过 HMAC 签名校验，便于本地联调
+# - secret 仍提供弱默认值，仅在手动开启 enabled=true 时使用；生产禁止该默认值
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    password: ${MYSQL_PASSWORD:123456}
+
+game:
+  internal-api:
+    enabled: false
+    secret: ${INTERNAL_API_SECRET:dev-internal-api-secret}

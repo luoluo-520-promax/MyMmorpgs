@@ -47,9 +47,29 @@ public class MonsterConfig {
     /** defense（类型：Integer） */
     private Integer defense = 5;@Column(name = "exp_reward", nullable = false)
     /** 经验reward（类型：Integer） */
-    private Integer expReward = 0;@Column(name = "description", length = 255)
+    private Integer expReward = 0;    @Column(name = "description", length = 255)
     /** description（类型：String） */
-    private String description;/**
+    private String description;
+
+    /** 所属地图 ID；null/0 表示全局模板（兼容旧数据） */
+    @Column(name = "map_id")
+    private Integer mapId;
+
+    @Column(name = "spawn_x")
+    private Float spawnX;
+
+    @Column(name = "spawn_z")
+    private Float spawnZ;
+
+    /** 死亡后刷新秒数，默认 30；0 表示不刷新 */
+    @Column(name = "respawn_seconds")
+    private Integer respawnSeconds = 30;
+
+    /** 1=普通 2=精英 3=Boss */
+    @Column(name = "elite_flag")
+    private Integer eliteFlag = 1;
+
+    /**
      * 获取标识属性值
      */
     public Integer getId() {
@@ -187,5 +207,45 @@ public class MonsterConfig {
      */
     public void setDescription(String description) {
         this.description = description;  // 访问或赋值当前实例字段
+    }
+
+    public Integer getMapId() {
+        return mapId;
+    }
+
+    public void setMapId(Integer mapId) {
+        this.mapId = mapId;
+    }
+
+    public Float getSpawnX() {
+        return spawnX;
+    }
+
+    public void setSpawnX(Float spawnX) {
+        this.spawnX = spawnX;
+    }
+
+    public Float getSpawnZ() {
+        return spawnZ;
+    }
+
+    public void setSpawnZ(Float spawnZ) {
+        this.spawnZ = spawnZ;
+    }
+
+    public Integer getRespawnSeconds() {
+        return respawnSeconds;
+    }
+
+    public void setRespawnSeconds(Integer respawnSeconds) {
+        this.respawnSeconds = respawnSeconds;
+    }
+
+    public Integer getEliteFlag() {
+        return eliteFlag;
+    }
+
+    public void setEliteFlag(Integer eliteFlag) {
+        this.eliteFlag = eliteFlag;
     }
 }

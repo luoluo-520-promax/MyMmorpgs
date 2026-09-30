@@ -4,6 +4,7 @@
         <packages>
             <package name="cn.itcast.demo.mymmorpg.service"/>
             <package name="cn.itcast.demo.mymmorpg.service.unit"/>
+            <package name="cn.itcast.demo.mymmorpg.model"/>
         </packages>
     </test>
 </suite>

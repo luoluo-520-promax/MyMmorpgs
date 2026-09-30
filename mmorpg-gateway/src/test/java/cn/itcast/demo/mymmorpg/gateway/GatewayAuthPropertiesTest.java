@@ -27,17 +27,9 @@ public class GatewayAuthPropertiesTest {
 
     @Test
     public void defaults() {
-        log.info("[测试开始] 场景=默认配置 | enabled期望=true | whitelist期望含/ws");
-
         GatewayAuthProperties p = new GatewayAuthProperties();
-        boolean enabled = p.isEnabled();
-        List<String> whitelist = p.getWhitelist();
-
-        log.info("[测试断言] 场景=默认配置 | enabled={} | whitelist={} | 期望enabled=true且whitelist非空",
-                enabled, whitelist);
-        assertThat(enabled).isTrue();
-        assertThat(whitelist).isNotEmpty();
-        assertThat(whitelist).contains("/ws");
+        assertThat(p.isEnabled()).isTrue();
+        assertThat(p.getWhitelist()).contains("/api/security/public-key", "/api/security/session-key");
     }
 
     @Test

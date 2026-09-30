@@ -3,6 +3,8 @@
     <test name="player-unit">
         <packages>
             <package name="cn.itcast.demo.mymmorpg.service"/>
+            <package name="cn.itcast.demo.mymmorpg.client"/>
+            <package name="cn.itcast.demo.mymmorpg.web"/>
         </packages>
     </test>
 </suite>

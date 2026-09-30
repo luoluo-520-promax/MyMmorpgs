@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: guild-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_CONFIG_ENABLED:false}
+        import-check:
+          enabled: false
+        file-extension: yaml
+    openfeign:
+      client:
+        config:
+          bag-service:
+            url: ${BAG_SERVICE_URL:http://127.0.0.1:8983}
+          chat-service:
+            url: ${CHAT_SERVICE_URL:http://127.0.0.1:8982}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8998
+
+game:
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

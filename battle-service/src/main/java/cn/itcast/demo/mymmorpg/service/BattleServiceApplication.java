@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.SpringApplication; // Spring Boot 应用启动器
 import org.springframework.boot.autoconfigure.SpringBootApplication; // 自动配置入口注解
 import org.springframework.cloud.openfeign.EnableFeignClients; // 启用 OpenFeign 远程调用客户端
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * battle-service 独立进程入口：启动 Web 容器、JPA、FightRpcServer 等组件。
@@ -16,6 +17,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients; // 启用 OpenFei
 @ConditionalOnProperty(name = "spring.application.name", havingValue = "battle-service")
 @SpringBootApplication(scanBasePackages = "cn.itcast.demo.mymmorpg") // 扫描 common + battle 模块全部 Bean
 @EnableFeignClients(basePackages = "cn.itcast.demo.mymmorpg") // 注册 Feign 客户端接口
+@EnableScheduling
 public class BattleServiceApplication { // battle-service 独立进程入口类
 
     /**

@@ -36,6 +36,18 @@ public class MapConfig {
     @Column(name = "default_lines", nullable = false) // 默认分线数列
     private Integer defaultLines = 1; // 默认线路数量
 
+    /** AOI 可视半径（世界坐标单位），默认 300 */
+    @Column(name = "aoi_radius", nullable = false)
+    private Integer aoiRadius = 300;
+
+    /** 九宫格格子边长，默认 100 */
+    @Column(name = "grid_size", nullable = false)
+    private Integer gridSize = 100;
+
+    /** 推荐进入等级 */
+    @Column(name = "recommend_level")
+    private Integer recommendLevel;
+
     public Integer getId() { // 获取地图 ID
         return id;
     }
@@ -74,5 +86,29 @@ public class MapConfig {
 
     public void setDefaultLines(Integer defaultLines) { // 设置默认分线数
         this.defaultLines = defaultLines; // 赋值分线数
+    }
+
+    public Integer getAoiRadius() {
+        return aoiRadius;
+    }
+
+    public void setAoiRadius(Integer aoiRadius) {
+        this.aoiRadius = aoiRadius;
+    }
+
+    public Integer getGridSize() {
+        return gridSize;
+    }
+
+    public void setGridSize(Integer gridSize) {
+        this.gridSize = gridSize;
+    }
+
+    public Integer getRecommendLevel() {
+        return recommendLevel;
+    }
+
+    public void setRecommendLevel(Integer recommendLevel) {
+        this.recommendLevel = recommendLevel;
     }
 }

@@ -1,0 +1,40 @@
+{
+  "skins": [
+    {
+      "skinId": 1001,
+      "itemId": 0,
+      "avatarId": 0,
+      "name": "默认外观",
+      "rarity": 1,
+      "resourceKey": "skin/default",
+      "previewIcon": "ui/skin/default",
+      "obtainTips": "创角自带",
+      "isDefault": true,
+      "enabled": true
+    },
+    {
+      "skinId": 1002,
+      "itemId": 71002,
+      "avatarId": 0,
+      "name": "旅人披风",
+      "rarity": 3,
+      "resourceKey": "skin/traveler_cloak",
+      "previewIcon": "ui/skin/traveler_cloak",
+      "obtainTips": "活动奖励",
+      "isDefault": false,
+      "enabled": true
+    },
+    {
+      "skinId": 1003,
+      "itemId": 71003,
+      "avatarId": 0,
+      "name": "星穹礼服",
+      "rarity": 5,
+      "resourceKey": "skin/star_dress",
+      "previewIcon": "ui/skin/star_dress",
+      "obtainTips": "商城购买",
+      "isDefault": false,
+      "enabled": true
+    }
+  ]
+}

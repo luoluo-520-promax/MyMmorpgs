@@ -4,6 +4,7 @@
  */
 package cn.itcast.demo.mymmorpg.service;
 
+import cn.itcast.demo.mymmorpg.challenge.ChallengeConfigLoader;
 import cn.itcast.demo.mymmorpg.entity.MonsterConfig;
 import cn.itcast.demo.mymmorpg.entity.Player;
 import cn.itcast.demo.mymmorpg.model.BattleSceneFactory;
@@ -27,6 +28,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.testng.annotations.AfterMethod;
@@ -42,6 +45,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -65,6 +69,8 @@ public class BattleServiceTest {
     @Mock
     private ValueOperations<String, String> valueOps;
     @Mock
+    private SetOperations<String, String> setOps;
+    @Mock
     private BattlePolicy battlePolicy;
     @Mock
     private BattleEventPublisher battleEventPublisher;
@@ -74,6 +80,8 @@ public class BattleServiceTest {
     private PlayerProgressPort playerProgressPort;
     @Mock
     private BattleSceneFactory battleSceneFactory;
+    @Mock
+    private ChallengeConfigLoader challengeConfigLoader;
 
     private AutoCloseable mocks;
     private BattleService battleService;
@@ -84,6 +92,26 @@ public class BattleServiceTest {
     public void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
         lenient().when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+        lenient().when(stringRedisTemplate.opsForSet()).thenReturn(setOps);
+        lenient().when(battleScenePort.markMonsterInCombat(anyLong(), anyLong())).thenAnswer(inv -> {
+            long pid = inv.getArgument(0);
+            long enemyId = inv.getArgument(1);
+            return battleScenePort.findMonsterForBattle(pid, enemyId)
+                    .map(r -> new BattleScenePort.EncounterLock(
+                            r.enemyEntityId(), r.sceneId(), r.monsterTemplateId(), 10f, 0f, 20f));
+        });
+        @SuppressWarnings("unchecked")
+        ObjectProvider<RogueService> rogueProvider = mock(ObjectProvider.class);
+        lenient().when(rogueProvider.getIfAvailable()).thenReturn(null);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<BattleEndProjectionNotifier> projectionProvider = mock(ObjectProvider.class);
+        lenient().when(projectionProvider.getIfAvailable()).thenReturn(null);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<cn.itcast.demo.mymmorpg.tlog.TLogEventPublisher> tlogProvider = mock(ObjectProvider.class);
+        lenient().when(tlogProvider.getIfAvailable()).thenReturn(null);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<cn.itcast.demo.mymmorpg.anticheat.AntiCheatService> antiCheatProvider = mock(ObjectProvider.class);
+        lenient().when(antiCheatProvider.getIfAvailable()).thenReturn(null);
         battleService = new BattleService(
                 configQueryService,
                 playerRepository,
@@ -94,7 +122,14 @@ public class BattleServiceTest {
                 battleEventPublisher,
                 playerNotificationPort,
                 playerProgressPort,
-                battleSceneFactory);
+                battleSceneFactory,
+                new BattleStatsCollector(),
+                challengeConfigLoader,
+                rogueProvider,
+                projectionProvider,
+                new cn.itcast.demo.mymmorpg.element.ElementReactionEngine(),
+                tlogProvider,
+                antiCheatProvider);
         log.info("[测试前置] BattleService 已初始化 | redisStatePrefix=battle:state: | redisActivePrefix=battle:active:");
     }
 
@@ -495,6 +530,7 @@ public class BattleServiceTest {
         BattleService.BattleRuntimeState state = new BattleService.BattleRuntimeState();
         state.battleId = battleId;
         state.playerId = playerId;
+        state.sceneId = 1;
         state.enemyEntityId = enemyEntityId;
         state.playerHp = playerHp;
         state.enemyHp = enemyHp;
@@ -505,6 +541,8 @@ public class BattleServiceTest {
         state.enemyMp = 0;
         state.enemyMpMax = 0;
         state.nextActionId = 1L;
+        state.turnNumber = 1;
+        state.currentActorId = playerId;
         state.ended = false;
         return state;
     }

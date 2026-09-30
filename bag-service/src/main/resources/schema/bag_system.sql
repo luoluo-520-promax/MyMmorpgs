@@ -27,8 +27,14 @@ CREATE TABLE IF NOT EXISTS `player_bag_item` (
     `count` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '当前数量',
     `bind` INT NOT NULL DEFAULT 0 COMMENT '0=未绑定 1=绑定',
     `slot_index` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '格子序号（整理时重排）',
+    `equip_slot` INT NOT NULL DEFAULT 0 COMMENT '0未穿戴 >0装备槽',
+    `affix_blob` BLOB NULL COMMENT '装备随机主/副词条 JSON',
+    `suit_id` INT NOT NULL DEFAULT 0 COMMENT '套装ID预留（本轮不匹配）',
     PRIMARY KEY (`id`),
     KEY `idx_player_slot` (`player_id`, `slot_index`),
     CONSTRAINT `fk_bag_player` FOREIGN KEY (`player_id`) REFERENCES `player` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_bag_item_config` FOREIGN KEY (`item_config_id`) REFERENCES `item_config` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家背包物品实例';
+
+-- 已有库增量：套装字段预留
+-- ALTER TABLE `player_bag_item` ADD COLUMN `suit_id` INT NOT NULL DEFAULT 0 COMMENT '套装ID预留';

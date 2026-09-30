@@ -11,6 +11,7 @@ package cn.itcast.demo.mymmorpg.service; // 统一处理经验增加、等级曲
 import cn.itcast.demo.mymmorpg.entity.Player; // JPA 玩家实体，含 exp、level 字段
 import cn.itcast.demo.mymmorpg.port.PlayerProgressPort; // 供 battle-service、activity-service 等模块调用加经验的端口
 import cn.itcast.demo.mymmorpg.event.PlayerLevelUpEvent; // 升级事件，订阅方可解锁功能、推送客户端 Notify
+import cn.itcast.demo.mymmorpg.support.RankingScoreStore;
 import jforgame.commons.eventbus.EventBus; // 进程内事件总线，同步发布升级事件
 import org.springframework.stereotype.Service; // 经验与升级 Bean，battle/activity 经 PlayerProgressPort 调用 addExp
 import org.springframework.transaction.annotation.Transactional; // 加经验与写缓存同一事务边界（脏标记落库由定时器异步刷）
@@ -27,12 +28,17 @@ public class PlayerProgressService implements PlayerProgressPort { // 玩家进�
     /** 事件总线，升级时通知 FunctionService 等功能模块 */
     private final EventBus eventBus; // 事件总线，升级时通知 FunctionService 等功能模块
 
+    private final RankingScoreStore rankingScoreStore;
+
     /**
-     * 构造器：缓存服务与事件总线。
+     * 构造器：缓存服务、事件总线与排行榜写回。
      */
-    public PlayerProgressService(PlayerEntityCacheService playerEntityCacheService, EventBus eventBus) { // 构造器：缓存服务与事件总线
+    public PlayerProgressService(PlayerEntityCacheService playerEntityCacheService,
+                                 EventBus eventBus,
+                                 RankingScoreStore rankingScoreStore) {
         this.playerEntityCacheService = playerEntityCacheService; // entity:player 缓存与脏标记
         this.eventBus = eventBus; // PlayerLevelUpEvent 驱动功能解锁
+        this.rankingScoreStore = rankingScoreStore;
     }
 
     @Override // PlayerProgressPort.addExp：战斗/任务奖励经验统一入口
@@ -50,13 +56,47 @@ public class PlayerProgressService implements PlayerProgressPort { // 玩家进�
         int newLevel = calcLevel(newExp); // 按 1000 经验/级曲线反算等级
         if (newLevel != oldLevel) { // 等级发生变化
             player.setLevel(newLevel); // 更新 Player.level
+            if (newLevel > oldLevel) {
+                int pts = player.getTalentPoints() == null ? 0 : player.getTalentPoints();
+                player.setTalentPoints(pts + (newLevel - oldLevel)); // 每升 1 级奖励 1 天赋点
+            }
         }
+        player.recalcPowerScore();
         Player saved = playerEntityCacheService.saveCacheAndMarkDirty(player); // 更新 entity:player 缓存并打脏
+        rankingScoreStore.updatePlayer(
+                saved.getId(),
+                saved.getLevel() == null ? 1 : saved.getLevel(),
+                saved.getPowerScore() == null ? 0 : saved.getPowerScore());
 
         if (newLevel > oldLevel) { // 升级发生
             eventBus.publish(new PlayerLevelUpEvent(saved, oldLevel, newLevel)); // FunctionFacade 触发等级型功能解锁
         }
         return saved; // 含最新 exp/level 的 Player 实体
+    }
+
+    @Override
+    @Transactional
+    public Player spendGold(Player player, long amount) {
+        if (player == null || player.getId() == null || amount <= 0) {
+            return player;
+        }
+        long gold = player.getGold() == null ? 0L : player.getGold();
+        if (gold < amount) {
+            return null;
+        }
+        player.setGold(gold - amount);
+        return playerEntityCacheService.saveCacheAndMarkDirty(player);
+    }
+
+    @Override
+    @Transactional
+    public Player addGold(Player player, long amount) {
+        if (player == null || player.getId() == null || amount <= 0) {
+            return player;
+        }
+        long gold = player.getGold() == null ? 0L : player.getGold();
+        player.setGold(gold + amount);
+        return playerEntityCacheService.saveCacheAndMarkDirty(player);
     }
 
     /**

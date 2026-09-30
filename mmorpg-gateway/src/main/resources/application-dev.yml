@@ -1,0 +1,8 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+server:
+  ssl:
+    key-store-password: ${GATEWAY_SSL_KEY_STORE_PASSWORD:changeit}

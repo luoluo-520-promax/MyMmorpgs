@@ -23,7 +23,14 @@ import java.util.List;
 public interface ActivityItemGrantPort {
 
     /**
-     * 发放itemsfor活动；参数：long playerId, List<ItemReward> rewards
+     * 活动领奖发道具（无幂等键时不保证防重）。
      */
-    int grantItemsForActivity(long playerId, List<ItemReward> rewards);
+    default int grantItemsForActivity(long playerId, List<ItemReward> rewards) {
+        return grantItemsForActivity(playerId, "", rewards);
+    }
+
+    /**
+     * 活动领奖发道具；同一 playerId + idempotencyKey 只成功发一次。
+     */
+    int grantItemsForActivity(long playerId, String idempotencyKey, List<ItemReward> rewards);
 }

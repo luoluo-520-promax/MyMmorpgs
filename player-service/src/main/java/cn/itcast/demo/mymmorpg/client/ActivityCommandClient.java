@@ -9,7 +9,8 @@
 
 package cn.itcast.demo.mymmorpg.client; // player-service Feign 客户端，远程调用 battle/activity
 
-import org.springframework.cloud.openfeign.FeignClient; // Feign 远程调用 FeignClient
+import cn.itcast.demo.mymmorpg.config.InternalApiFeignConfiguration;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType; // HTTP Content-Type 与响应体
 import org.springframework.web.bind.annotation.PostMapping; // Spring MVC REST 映射注解
 import org.springframework.web.bind.annotation.RequestBody; // Spring MVC REST 映射注解
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestHeader; // Spring MVC REST
  * 微服务模式下由 RemoteActivityGateway 注入使用。
  */
 
-@FeignClient(name = "activity-service", contextId = "activityCommandClient") // Nacos 服务名 activity-service
+@FeignClient(name = "activity-service", contextId = "activityCommandClient", configuration = InternalApiFeignConfiguration.class)
 
 public interface ActivityCommandClient { // ActivityCommandClient 接口定义
     /**

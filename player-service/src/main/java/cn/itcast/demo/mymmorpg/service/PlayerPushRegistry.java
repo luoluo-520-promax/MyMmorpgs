@@ -11,16 +11,22 @@ package cn.itcast.demo.mymmorpg.service; // 维护 playerId 与 Netty/WebSocket 
 import cn.itcast.demo.mymmorpg.net.BinaryFrameSender; // WebSocket 二进制帧封装（msgId + payload）
 import cn.itcast.demo.mymmorpg.net.GameMessage; // Netty 侧游戏消息帧，writeAndFlush 写出
 import cn.itcast.demo.mymmorpg.port.PlayerNotificationPort; // 跨模块下行推送端口契约
+import cn.itcast.demo.mymmorpg.protocol.MessageId;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.KickPlayerScNotify;
+import cn.itcast.demo.mymmorpg.support.DispatchFailureReporter;
 import io.netty.channel.ChannelHandlerContext; // Netty TCP 连接上下文
 import org.slf4j.Logger; // 推送失败时 debug 日志
 import org.slf4j.LoggerFactory; // Logger 工厂
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component; // 下行推送 Bean，SceneActorService/SkillService/PreloadService 发送 Notify
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession; // Spring WebSocket 会话
 
 import java.util.Collection; // sendToPlayers 批量目标
 import java.util.HashSet; // onlinePlayerIds 去重合并
 import java.util.Set; // 在线玩家 ID 集合
 import java.util.concurrent.ConcurrentHashMap; // 多连接并发 bind/unbind 安全
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 玩家推送注册表：选角成功后 bind 连接，服务端主动 Notify（场景同步、技能冷却、预加载就绪）经此下发。
@@ -29,7 +35,17 @@ import java.util.concurrent.ConcurrentHashMap; // 多连接并发 bind/unbind �
 @Component // 维护 playerId↔Netty/WS 双向映射，实现 PlayerNotificationPort 单播与广播
 public class PlayerPushRegistry implements PlayerNotificationPort { // 玩家推送注册表：选角成功后 bind 连接，服务端主动 Notify（场景同步、技能冷却、预加载就绪）经此下发
 
-    private static final Logger log = LoggerFactory.getLogger(PlayerPushRegistry.class); // WebSocket 推送失败 debug 日志
+    private static final Logger log = LoggerFactory.getLogger(PlayerPushRegistry.class); // WebSocket 推送失败 warn 日志
+
+    private final DispatchFailureReporter failureReporter;
+    private final AtomicLong droppedPushCount = new AtomicLong();
+
+    @Value("${game.kcp.drop-push-when-unwritable:true}")
+    private boolean dropPushWhenUnwritable = true;
+
+    public PlayerPushRegistry(DispatchFailureReporter failureReporter) {
+        this.failureReporter = failureReporter;
+    }
 
     /** playerId -> Netty ChannelHandlerContext，TCP 长连接通道 */
     private final ConcurrentHashMap<Long, ChannelHandlerContext> nettyByPlayer = new ConcurrentHashMap<>(); // playerId -> Netty ChannelHandlerContext，TCP 长连接通道
@@ -74,6 +90,14 @@ public class PlayerPushRegistry implements PlayerNotificationPort { // 玩家推
     public void send(long playerId, int msgId, byte[] payload) { // 登出或断线时解除双向绑定，防止向已关闭连接推送
         var ctx = nettyByPlayer.get(playerId); // 优先 Netty TCP 通道
         if (ctx != null && ctx.channel().isActive()) { // 连接仍活跃
+            if (dropPushWhenUnwritable && !ctx.channel().isWritable()) {
+                long n = droppedPushCount.incrementAndGet();
+                if (n == 1L || n % 100 == 0L) {
+                    log.warn("出站背压丢弃推送 playerId={} msgId={} droppedTotal={}", playerId, msgId, n);
+                }
+                failureReporter.recordPushFailure();
+                return;
+            }
             ctx.writeAndFlush(new GameMessage(msgId, payload)); // 写出二进制游戏帧
             return; // Netty 已下发，不再走 WebSocket
         }
@@ -81,8 +105,9 @@ public class PlayerPushRegistry implements PlayerNotificationPort { // 玩家推
         if (ws != null) { // 存在 WS 会话
             try { // WebSocket 半关闭或网络抖动时捕获异常，不阻断主流程
                 BinaryFrameSender.sendWebSocket(ws, msgId, payload); // 与 Netty 一致的 msgId+payload 格式
-            } catch (Exception e) { // sendWebSocket 写出失败，记录 debug 后吞掉
-                log.debug("WebSocket 推送失败 playerId={}", playerId, e); // 半关闭连接等，不阻断主流程
+            } catch (Exception e) { // sendWebSocket 写出失败
+                log.warn("WebSocket 推送失败 playerId={} msgId={}", playerId, msgId, e);
+                failureReporter.recordPushFailure();
             }
         }
     }
@@ -133,6 +158,30 @@ public class PlayerPushRegistry implements PlayerNotificationPort { // 玩家推
                 continue; // 全服公告不发给自己
             }
             send(pid, msgId, payload); // 广播下行帧
+        }
+    }
+
+    @Override
+    public void kick(long playerId, int reason, String message) {
+        if (playerId <= 0) {
+            return;
+        }
+        KickPlayerScNotify notify = KickPlayerScNotify.newBuilder()
+                .setReason(reason)
+                .setMessage(message == null ? "" : message)
+                .build();
+        send(playerId, MessageId.KICK_PLAYER_SC_NOTIFY, notify.toByteArray());
+        ChannelHandlerContext ctx = nettyByPlayer.remove(playerId);
+        if (ctx != null && ctx.channel().isActive()) {
+            ctx.close();
+        }
+        WebSocketSession ws = wsByPlayer.remove(playerId);
+        if (ws != null && ws.isOpen()) {
+            try {
+                ws.close(CloseStatus.NORMAL);
+            } catch (Exception e) {
+                log.debug("kick close ws failed playerId={}: {}", playerId, e.getMessage());
+            }
         }
     }
 }

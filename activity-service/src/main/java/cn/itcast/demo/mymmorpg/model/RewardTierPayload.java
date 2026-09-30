@@ -25,5 +25,9 @@ public class RewardTierPayload { // 活动配置 JSON 里「一档奖励」的�
     /** 首充达标金额；非首充档可为 null。 */
     public Integer targetRecharge; // 首充类活动达标门槛，null 表示不适用
     /** 签到第几天可领；非签到档可为 null。 */
-    public Integer signDay; // 签到类活动第几天可领，null 表示不适用
+    public Integer signDay;
+    /** 领取该档奖励所需阶段序号，null 表示不限。 */
+    public Integer requiredStage;
+    /** 该档额外发放的活动代币数量。 */
+    public Integer tokenAmount;
 } // RewardTierPayload 类结束

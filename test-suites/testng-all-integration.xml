@@ -7,6 +7,7 @@
     <suite-files>
         <suite-file path="../mmorpg-common/src/test/resources/testng-integration.xml"/>
         <suite-file path="../mmorpg-gateway/src/test/resources/testng-integration.xml"/>
+        <suite-file path="../scene-service/src/test/resources/testng-integration.xml"/>
         <suite-file path="../player-service/src/test/resources/testng-integration.xml"/>
         <suite-file path="../battle-service/src/test/resources/testng-integration.xml"/>
         <suite-file path="../activity-service/src/test/resources/testng-integration.xml"/>

@@ -1,0 +1,52 @@
+{
+  "_comment": "AI 活动策划 Copilot golden examples（与 ActivityImportDocument 对齐）",
+  "templates": {
+    "checkin": {
+      "type": 2,
+      "name": "限时签到活动",
+      "rewardMethod": 1,
+      "conditions": [{ "type": "SIGN_DAY_MIN", "intValue": 1 }],
+      "rewardTiers": [
+        { "index": 1, "itemId": 1001, "count": 100, "signDay": 1 },
+        { "index": 7, "itemId": 2001, "count": 1, "signDay": 7 }
+      ]
+    },
+    "recharge": {
+      "type": 1,
+      "name": "累充好礼",
+      "rewardMethod": 1,
+      "conditions": [{ "type": "RECHARGE_MIN", "intValue": 6 }],
+      "rewardTiers": [
+        { "index": 1, "itemId": 3001, "count": 1, "targetRecharge": 6 },
+        { "index": 2, "itemId": 3002, "count": 1, "targetRecharge": 30 }
+      ]
+    },
+    "shop": {
+      "type": 3,
+      "name": "限时兑换商店",
+      "rewardMethod": 1,
+      "shopId": 81001,
+      "token": { "tokenId": 91001, "tokenName": "活动币", "initialAmount": 0 },
+      "shopProducts": [
+        { "productId": 1, "itemId": 5001, "count": 1, "tokenCost": 100, "dailyLimit": 1 }
+      ]
+    }
+  },
+  "shop_pack_templates": {
+    "_comment": "氪金货架草稿（与 config/shop/products.json 对齐，走 /admin/ai/shop）",
+    "topup": {
+      "productType": "DIRECT_TOPUP",
+      "tabId": "topup",
+      "tags": ["diamond"]
+    },
+    "discount": {
+      "productType": "DISCOUNT_PACK",
+      "tabId": "discount"
+    },
+    "first_charge": {
+      "productType": "OTHER_PACK",
+      "limitType": "LIFETIME",
+      "tags": ["first_charge"]
+    }
+  }
+}

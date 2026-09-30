@@ -15,15 +15,13 @@ public class RpcSignUtilTest {
     private static final Logger log = LoggerFactory.getLogger(RpcSignUtilTest.class);
 
     @Test
-    public void sign_generatesExpectedMd5() {
+    public void sign_generatesExpectedHmac() {
         int serverId = 1001;
         String signKey = "mmorpg-test-key";
-        log.info("[测试开始] 场景=生成握手签名 | serverId={} | signKey={}", serverId, signKey);
 
         String sign = RpcSignUtil.sign(serverId, signKey);
 
-        log.info("[测试断言] 场景=生成握手签名 | sign={} | 长度期望=32", sign);
-        assertThat(sign).hasSize(32);
+        assertThat(sign).hasSize(64);
         assertThat(sign).isEqualTo(RpcSignUtil.sign(serverId, signKey));
     }
 

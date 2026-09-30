@@ -1,0 +1,37 @@
+# Agones GameServer Fleet（可选）：将 Scene 实例生命周期交给 Agones Allocator
+# 对接代码：K8sSceneAllocator / SceneInstancePool
+apiVersion: agones.dev/v1
+kind: Fleet
+metadata:
+  name: scene-fleet
+spec:
+  replicas: 2
+  scheduling: Packed
+  template:
+    spec:
+      ports:
+        - name: default
+          containerPort: 8082
+          protocol: TCP
+      health:
+        disabled: false
+        initialDelaySeconds: 30
+        periodSeconds: 10
+      template:
+        spec:
+          containers:
+            - name: scene
+              image: mymmorpg/scene-service:latest
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+---
+apiVersion: allocation.agones.dev/v1
+kind: GameServerAllocation
+metadata:
+  generateName: scene-alloc-
+spec:
+  required:
+    matchLabels:
+      agones.dev/fleet: scene-fleet

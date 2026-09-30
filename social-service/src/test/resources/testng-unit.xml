@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="social-service-unit">
+    <test name="social-unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.SocialRelationGraphServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.SocialAchievementBusinessFlowTest"/>
+        </classes>
+    </test>
+</suite>

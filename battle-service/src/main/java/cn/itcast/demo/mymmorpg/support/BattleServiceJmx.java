@@ -42,12 +42,27 @@ public class BattleServiceJmx { // 战斗服务 JMX 暴露类
     }
 
     /**
-     * 获取 Redis battle:active:* 绑定数量。
+     * 获取 Redis 活跃战斗索引大小（battle:active:index）。
      *
      * @return 活跃战斗绑定数
      */
-    @ManagedAttribute(description = "Redis battle:active:* 绑定数量") // JMX 可读属性
-    public int getActiveBattleBindings() { // 查询活跃绑定数
-        return battleService.countActiveBattleBindings(); // 委托 BattleService
+    @ManagedAttribute(description = "Redis battle:active:index 绑定数量")
+    public int getActiveBattleBindings() {
+        return battleService.countActiveBattleBindings();
+    }
+
+    @ManagedAttribute(description = "进程内已结算战斗场次")
+    public long getBattlesEnded() {
+        return battleService.statsSnapshot().getEndedTotal();
+    }
+
+    @ManagedAttribute(description = "进程内胜率（0~1）")
+    public double getWinRate() {
+        return battleService.statsSnapshot().getWinRate();
+    }
+
+    @ManagedAttribute(description = "进程内平均战斗时长（秒）")
+    public double getAvgDurationSec() {
+        return battleService.statsSnapshot().getAvgDurationSec();
     }
 }

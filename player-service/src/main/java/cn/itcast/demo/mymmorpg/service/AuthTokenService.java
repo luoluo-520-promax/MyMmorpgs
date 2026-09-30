@@ -1,103 +1,356 @@
+package cn.itcast.demo.mymmorpg.service;
+
+import cn.itcast.demo.mymmorpg.config.SessionLoginProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 /**
- * 文件维护说明
- * 1) 文件路径：player-service/src/main/java/cn/itcast/demo/mymmorpg/service/AuthTokenService.java
- * 2) 所属模块：player-service / main/java/cn/itcast/demo/mymmorpg/service
- * 3) 主要职责：账号级单点登录 Token 签发与校验，Redis 双向映射实现后登录踢前登录。
- * 4) 变更建议：修改前先确认上下游依赖、协议字段与缓存键是否受影响。
- * 5) 风险提示：若涉及并发、事务、MQ、Redis，请同步补充回归测试与监控指标。
+ * 账号登录令牌：支持单端 / 白名单多端 / 踢最老会话，并可刷新 TTL。
  */
-package cn.itcast.demo.mymmorpg.service; // 账号级 SSO Token：auth:account:* 与 auth:token:* 双向映射
+@Service
+@EnableConfigurationProperties(SessionLoginProperties.class)
+public class AuthTokenService {
 
-import org.springframework.beans.factory.annotation.Value; // game.auth.max-online-accounts 与 token-ttl-hours
-import org.springframework.data.redis.core.StringRedisTemplate; // 读写 auth:account:* 与 auth:token:* 键
-import org.springframework.stereotype.Service; // AccountPlayerService 登录签发；LoginAdmissionManager 统计在线数
+    private static final String KEY_ACCOUNT_PREFIX = "auth:account:";
+    private static final String KEY_TOKEN_PREFIX = "auth:token:";
+    private static final String KEY_ONLINE_ACCOUNTS = "auth:online_accounts";
+    private static final String KEY_SESSIONS = "auth:sessions:";
+    private static final String KEY_DEVICE = "auth:device:";
 
-import java.time.Duration; // Token TTL，写入 Redis SETEX
-import java.util.UUID; // 生成无横线 32 位随机 Token 字符串
+    private final StringRedisTemplate redisTemplate;
+    private final long maxOnlineAccounts;
+    private final SessionLoginProperties sessionProps;
+    private final ObjectMapper objectMapper;
 
-/**
- * 账号级统一登录令牌服务（单点登录）。
- * <p>
- * Redis 维护两类键：
- * <ul>
- *     <li>auth:account:{accountId} → token</li>
- *     <li>auth:token:{token} → accountId</li>
- * </ul>
- * 同一账号仅允许一个有效 Token，后登录自动失效旧 Token。
- */
-@Service // AccountPlayerService 登录成功时签发；LoginAdmissionManager 统计 auth:account:* 在线数
-public class AuthTokenService { // 与 mmorpg-gateway AuthGlobalFilter 共享 auth:token:* 键空间
+    public AuthTokenService(
+            StringRedisTemplate redisTemplate,
+            ObjectProvider<ObjectMapper> objectMapperProvider,
+            SessionLoginProperties sessionProps,
+            @org.springframework.beans.factory.annotation.Value("${game.auth.max-online-accounts:10000}") long maxOnlineAccounts) {
+        this.redisTemplate = redisTemplate;
+        this.sessionProps = sessionProps;
+        this.maxOnlineAccounts = maxOnlineAccounts;
+        ObjectMapper om = objectMapperProvider == null ? null : objectMapperProvider.getIfAvailable();
+        this.objectMapper = om == null ? new ObjectMapper() : om;
+    }
 
-    /** Redis 账号→Token 映射前缀，完整键 auth:account:{accountId}，值为当前有效 token */
-    private static final String KEY_ACCOUNT_PREFIX = "auth:account:"; // SETEX auth:account:{accountId} → token
+    public Duration tokenTtl() {
+        return Duration.ofHours(sessionProps.getTokenTtlHours());
+    }
 
-    /** Redis Token→账号映射前缀，完整键 auth:token:{token}，值为 accountId 字符串 */
-    private static final String KEY_TOKEN_PREFIX = "auth:token:"; // SETEX auth:token:{token} → accountId
-
-    /** 与 auth-service / mmorpg-gateway 共享的 Redis 客户端 */
-    private final StringRedisTemplate redisTemplate; // opsForValue GET/SET/DEL auth:account 与 auth:token
-
-    /** game.auth.max-online-accounts：auth:account:* 键数量上限，超限拒绝新登录 */
-    private final long maxOnlineAccounts; // LoginAdmissionManager.isServerOverloaded 对比阈值
-
-    /** game.auth.token-ttl-hours：Token Redis SETEX 有效期，默认 24 小时 */
-    private final Duration ttl; // issueTokenForAccount 写入双向映射的过期时间
-
-    public AuthTokenService( // 账号级统一登录令牌服务（单点登录）
-            StringRedisTemplate redisTemplate, // 读写 auth:account 与 auth:token 双向映射
-            @Value("${game.auth.max-online-accounts:10000}") long maxOnlineAccounts, // 全服同时持有有效 Token 的账号数上限
-            @Value("${game.auth.token-ttl-hours:24}") long tokenTtlHours) { // Redis Token 键 TTL（小时），过期后需重新登录
-        this.redisTemplate = redisTemplate; // 与 mmorpg-gateway 共享 Redis 集群
-        this.maxOnlineAccounts = maxOnlineAccounts; // LoginAdmissionManager 满载判断阈值
-        this.ttl = Duration.ofHours(tokenTtlHours <= 0 ? 24 : tokenTtlHours); // 非法 TTL 回退 24h
+    public long tokenExpireAtMillis() {
+        return System.currentTimeMillis() + tokenTtl().toMillis();
     }
 
     /**
-     * 为账号签发新 Token；若已有旧 Token 则先删除 auth:token:{oldToken}，实现单点登录。
+     * 按策略签发令牌，返回新 token；被踢下线的旧 deviceId 列表可通过 {@link IssueResult#kickedDeviceIds()} 取得。
      */
-    public String issueTokenForAccount(long accountId) { // 为账号签发新 Token；若已有旧 Token 则先删除 auth:token:{oldToken}，实现单点登录
-        String accountKey = KEY_ACCOUNT_PREFIX + accountId; // 拼 auth:account:{accountId}
-        String oldToken = redisTemplate.opsForValue().get(accountKey); // GET 该账号当前有效 Token
-        if (oldToken != null && !oldToken.isEmpty()) { // 该账号已有旧登录会话
-            redisTemplate.delete(KEY_TOKEN_PREFIX + oldToken); // DEL auth:token:{oldToken}，踢掉前一次登录
+    public IssueResult issueToken(long accountId, LoginDeviceContext device) {
+        LoginDeviceContext ctx = device == null ? LoginDeviceContext.empty() : device;
+        SessionLoginProperties.Policy policy = SessionLoginProperties.Policy.from(sessionProps.getLoginPolicy());
+        List<String> kicked = applyPolicyBeforeIssue(accountId, ctx, policy);
+        String token = UUID.randomUUID().toString().replace("-", "");
+        long expireAt = tokenExpireAtMillis();
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("accountId", accountId);
+        meta.put("deviceId", ctx.deviceId());
+        meta.put("clientType", ctx.clientType());
+        meta.put("clientIp", ctx.clientIp());
+        meta.put("userAgent", ctx.userAgent());
+        meta.put("issuedAt", System.currentTimeMillis());
+        meta.put("expireAt", expireAt);
+        writeToken(accountId, token, ctx.deviceId(), meta);
+        return new IssueResult(token, expireAt, kicked);
+    }
+
+    /** 兼容旧调用：等价于 single_device 签发。 */
+    public String issueTokenForAccount(long accountId) {
+        return issueToken(accountId, LoginDeviceContext.empty()).token();
+    }
+
+    public void revokeTokenForAccount(long accountId) {
+        Map<Object, Object> sessions = redisTemplate.opsForHash().entries(KEY_SESSIONS + accountId);
+        if (sessions != null) {
+            for (Object tokenObj : sessions.values()) {
+                if (tokenObj != null) {
+                    redisTemplate.delete(KEY_TOKEN_PREFIX + tokenObj);
+                }
+            }
         }
-        String token = UUID.randomUUID().toString().replace("-", ""); // 生成 32 位 hex Token 写入 AccountLoginScRsp
-        String tokenKey = KEY_TOKEN_PREFIX + token; // 拼 auth:token:{token}
-        redisTemplate.opsForValue().set(accountKey, token, ttl); // SETEX auth:account:{accountId} → token
-        redisTemplate.opsForValue().set(tokenKey, Long.toString(accountId), ttl); // SETEX auth:token:{token} → accountId
-        return token; // 写入 AccountLoginScRsp.token 供客户端后续鉴权与 WebSocket 握手
+        redisTemplate.delete(KEY_SESSIONS + accountId);
+        String legacy = redisTemplate.opsForValue().get(KEY_ACCOUNT_PREFIX + accountId);
+        if (legacy != null && !legacy.isEmpty()) {
+            redisTemplate.delete(KEY_TOKEN_PREFIX + legacy);
+        }
+        redisTemplate.delete(KEY_ACCOUNT_PREFIX + accountId);
+        redisTemplate.opsForSet().remove(KEY_ONLINE_ACCOUNTS, Long.toString(accountId));
+    }
+
+    public void revokeDevice(long accountId, String deviceId) {
+        if (accountId <= 0 || deviceId == null || deviceId.isBlank()) {
+            return;
+        }
+        Object token = redisTemplate.opsForHash().get(KEY_SESSIONS + accountId, deviceId);
+        if (token != null) {
+            redisTemplate.delete(KEY_TOKEN_PREFIX + token);
+            redisTemplate.opsForHash().delete(KEY_SESSIONS + accountId, deviceId);
+        }
+        redisTemplate.delete(KEY_DEVICE + accountId + ":" + deviceId);
+        maybeClearLegacy(accountId);
     }
 
     /**
-     * 根据 Token 反查 accountId，供跨服功能或 WebSocket 会话 accountId 校验。
+     * 刷新票据：校验旧 token 后延长 TTL；可选轮换 token 值。
      */
-    public Long getAccountIdByToken(String token) { // 根据 Token 反查 accountId，供跨服功能或 WebSocket 会话 accountId 校验
-        if (token == null || token.isEmpty()) { // 请求未携带 Token
-            return null; // 无法识别 accountId
+    public IssueResult renewToken(String oldToken, String deviceId) {
+        TokenMeta meta = getTokenMeta(oldToken);
+        if (meta == null) {
+            return null;
         }
-        String v = redisTemplate.opsForValue().get(KEY_TOKEN_PREFIX + token); // GET auth:token:{token}
-        if (v == null || v.isEmpty()) { // 键不存在或已 TTL 过期
-            return null; // 已过期或从未登录
+        if (sessionProps.isBindingCheckEnabled() && deviceId != null && !deviceId.isBlank()
+                && meta.deviceId() != null && !meta.deviceId().isBlank()
+                && !meta.deviceId().equals(deviceId)) {
+            return null;
         }
-        try { // 解析 Redis auth:token:{token} 值为 accountId Long
-            return Long.parseLong(v); // 解析 accountId 字符串
-        } catch (NumberFormatException e) { // Redis 值非数字视为无效 Token
-            return null; // Redis 值损坏，视为无效 Token
-        }
+        // 轮换：删旧发新，防止长期固定票据被盗用
+        redisTemplate.delete(KEY_TOKEN_PREFIX + oldToken);
+        LoginDeviceContext ctx = new LoginDeviceContext(
+                meta.deviceId(), meta.clientType(), meta.clientIp(), meta.userAgent());
+        return issueToken(meta.accountId(), ctx);
     }
 
     /**
-     * 当前有效 Token 对应账号数是否已达或超过配置上限。
+     * 票据过期但会话仍在线时，按 session/account 重新签发（降级重连）。
      */
-    public boolean isServerOverloaded() { // 当前有效 Token 对应账号数是否已达或超过配置上限
-        return countOnlineAccounts() >= maxOnlineAccounts; // auth:account:* 数量 ≥ game.auth.max-online-accounts
+    public IssueResult reissueByAccount(long accountId, LoginDeviceContext device) {
+        if (accountId <= 0) {
+            return null;
+        }
+        return issueToken(accountId, device == null ? LoginDeviceContext.empty() : device);
     }
 
-    /**
-     * 统计当前拥有有效 Token 的账号数量（auth:account:* 键个数）。
-     */
-    public long countOnlineAccounts() { // 统计当前拥有有效 Token 的账号数量（auth:account:* 键个数）
-        var keys = redisTemplate.keys(KEY_ACCOUNT_PREFIX + "*"); // KEYS auth:account:* 扫描在线账号
-        return keys == null ? 0 : keys.size(); // 键集合大小即当前持有有效 Token 的账号数
+    public Long getAccountIdByToken(String token) {
+        TokenMeta meta = getTokenMeta(token);
+        return meta == null ? null : meta.accountId();
+    }
+
+    public TokenMeta getTokenMeta(String token) {
+        if (token == null || token.isEmpty()) {
+            return null;
+        }
+        String v = redisTemplate.opsForValue().get(KEY_TOKEN_PREFIX + token);
+        if (v == null || v.isEmpty()) {
+            return null;
+        }
+        // 兼容旧格式：纯 accountId
+        if (!v.startsWith("{")) {
+            try {
+                return new TokenMeta(Long.parseLong(v), "", "", "", "", 0L, 0L);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        try {
+            Map<String, Object> m = objectMapper.readValue(v, new TypeReference<>() {
+            });
+            return new TokenMeta(
+                    asLong(m.get("accountId")),
+                    str(m.get("deviceId")),
+                    str(m.get("clientType")),
+                    str(m.get("clientIp")),
+                    str(m.get("userAgent")),
+                    asLong(m.get("issuedAt")),
+                    asLong(m.get("expireAt")));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public boolean validateBinding(String token, String clientIp, String userAgent) {
+        if (!sessionProps.isBindingCheckEnabled()) {
+            return true;
+        }
+        TokenMeta meta = getTokenMeta(token);
+        if (meta == null) {
+            return false;
+        }
+        if (meta.clientIp() != null && !meta.clientIp().isBlank()
+                && clientIp != null && !clientIp.isBlank()
+                && !meta.clientIp().equals(clientIp)) {
+            return false;
+        }
+        if (meta.userAgent() != null && !meta.userAgent().isBlank()
+                && userAgent != null && !userAgent.isBlank()
+                && !meta.userAgent().equals(userAgent)) {
+            return false;
+        }
+        return true;
+    }
+
+    public List<DeviceSession> listSessions(long accountId) {
+        Map<Object, Object> sessions = redisTemplate.opsForHash().entries(KEY_SESSIONS + accountId);
+        List<DeviceSession> out = new ArrayList<>();
+        if (sessions == null) {
+            return out;
+        }
+        for (Map.Entry<Object, Object> e : sessions.entrySet()) {
+            String deviceId = String.valueOf(e.getKey());
+            String token = String.valueOf(e.getValue());
+            TokenMeta meta = getTokenMeta(token);
+            out.add(new DeviceSession(deviceId,
+                    meta == null ? "" : meta.clientType(),
+                    token,
+                    meta == null ? 0L : meta.issuedAt(),
+                    meta == null ? 0L : meta.expireAt()));
+        }
+        out.sort(Comparator.comparingLong(DeviceSession::issuedAt));
+        return out;
+    }
+
+    public boolean isServerOverloaded() {
+        return countOnlineAccounts() >= maxOnlineAccounts;
+    }
+
+    public long countOnlineAccounts() {
+        Long size = redisTemplate.opsForSet().size(KEY_ONLINE_ACCOUNTS);
+        return size == null ? 0 : size;
+    }
+
+    private List<String> applyPolicyBeforeIssue(long accountId, LoginDeviceContext ctx, SessionLoginProperties.Policy policy) {
+        List<String> kicked = new ArrayList<>();
+        String deviceKey = normalizeDevice(ctx.deviceId());
+        List<DeviceSession> existing = listSessions(accountId);
+        // 同设备重登：只替换本设备票，不踢其他端
+        if (!deviceKey.isBlank()) {
+            for (DeviceSession s : existing) {
+                if (deviceKey.equals(s.deviceId())) {
+                    revokeDevice(accountId, s.deviceId());
+                    return kicked;
+                }
+            }
+        }
+        switch (policy) {
+            case MULTI_DEVICE_ALLOWLIST -> {
+                String type = normalizeType(ctx.clientType());
+                boolean allowed = sessionProps.getAllowClientTypes().stream()
+                        .anyMatch(t -> normalizeType(t).equals(type));
+                if (!allowed) {
+                    // 不在白名单：退化为单端
+                    for (DeviceSession s : existing) {
+                        revokeDevice(accountId, s.deviceId());
+                        kicked.add(s.deviceId());
+                    }
+                } else {
+                    // 同 clientType 互踢，不同类型并存
+                    for (DeviceSession s : existing) {
+                        if (normalizeType(s.clientType()).equals(type)) {
+                            revokeDevice(accountId, s.deviceId());
+                            kicked.add(s.deviceId());
+                        }
+                    }
+                }
+            }
+            case KICK_OLDEST -> {
+                while (existing.size() >= sessionProps.getMaxSessions()) {
+                    DeviceSession oldest = existing.get(0);
+                    revokeDevice(accountId, oldest.deviceId());
+                    kicked.add(oldest.deviceId());
+                    existing.remove(0);
+                }
+            }
+            default -> {
+                for (DeviceSession s : existing) {
+                    revokeDevice(accountId, s.deviceId());
+                    kicked.add(s.deviceId());
+                }
+                // 清理旧单点键
+                String old = redisTemplate.opsForValue().get(KEY_ACCOUNT_PREFIX + accountId);
+                if (old != null && !old.isEmpty()) {
+                    redisTemplate.delete(KEY_TOKEN_PREFIX + old);
+                }
+            }
+        }
+        return kicked;
+    }
+
+    private void writeToken(long accountId, String token, String deviceId, Map<String, Object> meta) {
+        String device = normalizeDevice(deviceId);
+        if (device.isBlank()) {
+            device = "default";
+            meta.put("deviceId", device);
+        }
+        Duration ttl = tokenTtl();
+        try {
+            redisTemplate.opsForValue().set(KEY_TOKEN_PREFIX + token, objectMapper.writeValueAsString(meta), ttl);
+        } catch (Exception e) {
+            redisTemplate.opsForValue().set(KEY_TOKEN_PREFIX + token, Long.toString(accountId), ttl);
+        }
+        redisTemplate.opsForHash().put(KEY_SESSIONS + accountId, device, token);
+        redisTemplate.expire(KEY_SESSIONS + accountId, ttl);
+        // 兼容旧网关：主 token 指向最新签发
+        redisTemplate.opsForValue().set(KEY_ACCOUNT_PREFIX + accountId, token, ttl);
+        redisTemplate.opsForSet().add(KEY_ONLINE_ACCOUNTS, Long.toString(accountId));
+    }
+
+    private void maybeClearLegacy(long accountId) {
+        Long size = redisTemplate.opsForHash().size(KEY_SESSIONS + accountId);
+        if (size == null || size == 0L) {
+            redisTemplate.delete(KEY_ACCOUNT_PREFIX + accountId);
+            redisTemplate.opsForSet().remove(KEY_ONLINE_ACCOUNTS, Long.toString(accountId));
+        }
+    }
+
+    private static String normalizeDevice(String deviceId) {
+        return deviceId == null ? "" : deviceId.trim();
+    }
+
+    private static String normalizeType(String clientType) {
+        return clientType == null || clientType.isBlank() ? "UNKNOWN" : clientType.trim().toUpperCase();
+    }
+
+    private static String str(Object o) {
+        return o == null ? "" : String.valueOf(o);
+    }
+
+    private static long asLong(Object o) {
+        if (o instanceof Number n) {
+            return n.longValue();
+        }
+        if (o == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(o));
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    public record LoginDeviceContext(String deviceId, String clientType, String clientIp, String userAgent) {
+        public static LoginDeviceContext empty() {
+            return new LoginDeviceContext("", "", "", "");
+        }
+    }
+
+    public record IssueResult(String token, long expireAtMillis, List<String> kickedDeviceIds) {
+    }
+
+    public record TokenMeta(long accountId, String deviceId, String clientType, String clientIp,
+                            String userAgent, long issuedAt, long expireAt) {
+    }
+
+    public record DeviceSession(String deviceId, String clientType, String token, long issuedAt, long expireAt) {
     }
 }

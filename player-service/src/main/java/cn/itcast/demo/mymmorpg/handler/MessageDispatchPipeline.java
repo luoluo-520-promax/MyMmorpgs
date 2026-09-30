@@ -10,6 +10,7 @@ package cn.itcast.demo.mymmorpg.handler; // player-service 协议 Facade 与消�
 import cn.itcast.demo.mymmorpg.handler.GameMessageFactory; // msgId 路由表与 BattleMessage 标记
 import cn.itcast.demo.mymmorpg.protocol.ProtocolMessage; // RPC 回包与幂等 replay 的统一结构
 import cn.itcast.demo.mymmorpg.rpc.RpcForwardClientResponse; // FIGHT 服 RPC 转发响应 msgId+payload
+import cn.itcast.demo.mymmorpg.support.DispatchFailureReporter;
 import cn.itcast.demo.mymmorpg.net.GameContext; // 静态 serverType，区分 GAME/CENTRE/FIGHT/GATE
 import cn.itcast.demo.mymmorpg.net.ServerType; // GAME 服才启用 BattleRpcForwarder 跨服路径
 import org.slf4j.Logger; // debug 级别记录未知 msgId 丢弃
@@ -32,27 +33,35 @@ public class MessageDispatchPipeline extends ChainedMessageDispatcher { // Netty
     private final IdempotencyService idempotencyService; // tryReplay/record TCP/WebSocket 重传去重
     /** RPC 转发 FIGHT 的最大等待毫秒，超时回退本地 ClientRequestTask */
     private final long rpcTimeoutMs; // game.dispatch.rpc-timeout-ms
+    /** 故障指标上报 */
+    private final DispatchFailureReporter failureReporter;
+
     public MessageDispatchPipeline(DispatchThreadModel dispatchThreadModel, // 构造注入 dispatch 分片与路由依赖
                                    GameMessageFactory factory, // msgId -> Invoker 路由表
                                    BattleRpcForwarder battleRpcForwarder, // BattleMessage 跨服 RPC 转发 FIGHT
                                    IdempotencyService idempotencyService, // TCP/WebSocket 重传 replay/record
+                                   DispatchFailureReporter failureReporter,
                                    @Value("${game.dispatch.rpc-timeout-ms:1500}") long rpcTimeoutMs) { // RPC 同步等待 FIGHT 上限毫秒
         this.dispatchThreadModel = dispatchThreadModel; // 业务线程分片提交
         this.factory = factory; // msgId 路由表
         this.battleRpcForwarder = battleRpcForwarder; // 跨服战斗转发
         this.idempotencyService = idempotencyService; // 幂等 replay/record
+        this.failureReporter = failureReporter;
         this.rpcTimeoutMs = rpcTimeoutMs; // FIGHT RPC await 超时
     } // 编译单元结束
 
     @Override // 实现接口/父类方法
-    protected boolean preHandle(DispatchSession session, int msgId, byte[] payload) { // Netty/WebSocket IO 线程同步执行
-        if (factory.get(msgId) == null) { // GameMessageFactory 未注册该 msgId
-            log.debug("Drop unknown msgId={}", msgId); // 版本不匹配或恶意包，IO 线程轻量丢弃
-            return false; // 阻止进入 dispatch，不进业务线程池
-        } // 编译单元结束
-
-        return true; // 已注册路由，允许 submit 到 DispatchThreadModel
-    } // 编译单元结束
+    protected boolean preHandle(DispatchSession session, int msgId, byte[] payload) {
+        if (factory.get(msgId) == null) {
+            log.debug("Drop unknown msgId={}", msgId);
+            return false;
+        }
+        if (!SessionAuthGuard.isPublicMessage(msgId) && !SessionAuthGuard.isAuthenticated(session)) {
+            log.debug("Reject unauthenticated msgId={}", msgId);
+            return false;
+        }
+        return true;
+    }
 
     @Override // 实现接口/父类方法
     protected void dispatch(DispatchSession session, int msgId, byte[] payload) { // preHandle 通过后异步提交业务
@@ -92,8 +101,9 @@ public class MessageDispatchPipeline extends ChainedMessageDispatcher { // Netty
                     } // 块 代码块结束
                 } catch (InterruptedException e) { // RPC await 被 shutdownNow 中断
                     Thread.currentThread().interrupt(); // 恢复中断标志
-                } catch (Exception ignore) { // RPC 网络失败或 FIGHT 异常
-                    // RPC 失败静默，走下方本地 ClientRequestTask 兜底
+                } catch (Exception e) { // RPC 网络失败或 FIGHT 异常
+                    log.warn("Battle RPC 转发失败，降级本地处理 playerId={} msgId={}", session.playerId(), msgId, e);
+                    failureReporter.recordRpcForwardFailure();
                 } // 编译单元结束
 
                 new ClientRequestTask(session, msgId, payload, factory, idempotencyService).run(); // FIGHT 不可用时的本地 Facade 兜底

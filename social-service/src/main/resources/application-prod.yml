@@ -1,0 +1,6 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+rocketmq:
+  enabled: ${ROCKETMQ_ENABLED:true}

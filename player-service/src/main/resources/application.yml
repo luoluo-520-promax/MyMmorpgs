@@ -6,6 +6,8 @@
 spring:
   application:
     name: player-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   autoconfigure:
     exclude:
       - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
@@ -33,6 +35,28 @@ spring:
             url: ${BATTLE_SERVICE_URL:http://127.0.0.1:8991}
           activity-service:
             url: ${ACTIVITY_SERVICE_URL:http://127.0.0.1:8992}
+          scene-service:
+            url: ${SCENE_SERVICE_URL:http://127.0.0.1:8981}
+          chat-service:
+            url: ${CHAT_SERVICE_URL:http://127.0.0.1:8982}
+          bag-service:
+            url: ${BAG_SERVICE_URL:http://127.0.0.1:8983}
+          skill-service:
+            url: ${SKILL_SERVICE_URL:http://127.0.0.1:8984}
+          hall-service:
+            url: ${HALL_SERVICE_URL:http://127.0.0.1:8986}
+          quest-service:
+            url: ${QUEST_SERVICE_URL:http://127.0.0.1:8987}
+          matchmaking-service:
+            url: ${MATCHMAKING_SERVICE_URL:http://127.0.0.1:8988}
+          update-service:
+            url: ${UPDATE_SERVICE_URL:http://127.0.0.1:8993}
+          shop-service:
+            url: ${SHOP_SERVICE_URL:http://127.0.0.1:8990}
+          gacha-service:
+            url: ${GACHA_SERVICE_URL:http://127.0.0.1:8994}
+          ai-service:
+            url: ${AI_SERVICE_URL:http://127.0.0.1:8995}
       circuitbreaker:
         enabled: true
   config:
@@ -42,8 +66,12 @@ spring:
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_PLAYER:player_db}?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:123456}
+    password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    locations: classpath:db/migration
   cache:
     type: redis
   jpa:
@@ -61,12 +89,121 @@ spring:
       timeout: 3s
 
 # Netty 游戏协议端口（二进制 Protobuf）
+player:
+  ai:
+    enabled: ${PLAYER_AI_ENABLED:true}
+    # rule-coach（默认）| llm — 对齐 MyLunarCore：本地规则优先，LLM 默认关闭
+    mode: ${PLAYER_AI_MODE:rule-coach}
+    llm-enabled: ${PLAYER_AI_LLM_ENABLED:false}
+    api-key: ${PLAYER_AI_API_KEY:}
+    base-url: ${PLAYER_AI_BASE_URL:https://api.openai.com/v1}
+    model: ${PLAYER_AI_MODEL:gpt-4o-mini}
+    timeout-ms: ${PLAYER_AI_TIMEOUT_MS:60000}
+    prompt-version: ${PLAYER_AI_PROMPT_VERSION:player-advisor-v1}
+
 game:
+  # 客户端版本治理：低于 min 拒绝登录；低于 optional 仍可登录但建议更新
+  client:
+    min-version: ${GAME_CLIENT_MIN_VERSION:0}
+    optional-version: ${GAME_CLIENT_OPTIONAL_VERSION:0}
+  # Center 场景路由：local=进程内目录；remote=预留远端中心服
+  center:
+    mode: ${GAME_CENTER_MODE:local}
+    local-node-id: ${GAME_CENTER_LOCAL_NODE_ID:local}
+    remote-base-url: ${GAME_CENTER_REMOTE_BASE_URL:}
+    advertise-host: ${GAME_CENTER_ADVERTISE_HOST:127.0.0.1}
+    advertise-port: ${GAME_CENTER_ADVERTISE_PORT:8089}
+    remote-timeout-ms: ${GAME_CENTER_REMOTE_TIMEOUT_MS:2500}
+  # 大世界分线 / Zone / 重连（P1）
+  scene:
+    remote:
+      enabled: ${GAME_SCENE_REMOTE_ENABLED:false}
+    max-players-per-line: ${GAME_SCENE_MAX_PLAYERS_PER_LINE:100}
+    max-lines-per-map: ${GAME_SCENE_MAX_LINES_PER_MAP:20}
+    empty-line-ttl-ms: ${GAME_SCENE_EMPTY_LINE_TTL_MS:300000}
+    empty-line-gc-ms: ${GAME_SCENE_EMPTY_LINE_GC_MS:30000}
+    reconnect-grace-ms: ${GAME_SCENE_RECONNECT_GRACE_MS:60000}
+    register-to-center: ${GAME_SCENE_REGISTER_TO_CENTER:false}
+    owned-scene-ids: []
+    node-heartbeat-ms: ${GAME_SCENE_NODE_HEARTBEAT_MS:15000}
+    node-stale-ms: ${GAME_SCENE_NODE_STALE_MS:45000}
+    node-health-check-ms: ${GAME_SCENE_NODE_HEALTH_CHECK_MS:5000}
+  # 会话 / 多端登录 / 风控
+  session:
+    login-policy: ${GAME_SESSION_LOGIN_POLICY:single_device} # single_device | multi_device_allowlist | kick_oldest
+    allow-client-types:
+      - PC
+      - MOBILE
+      - CONSOLE
+    max-sessions: ${GAME_SESSION_MAX_SESSIONS:3}
+    reconnect-no-kick-ms: ${GAME_SESSION_RECONNECT_NO_KICK_MS:60000}
+    token-ttl-hours: ${GAME_SESSION_TOKEN_TTL_HOURS:2}
+    renew-enabled: true
+    binding-check-enabled: ${GAME_SESSION_BINDING_CHECK:false}
+    login-rate-window-seconds: ${GAME_LOGIN_RATE_WINDOW_SECONDS:60}
+    login-rate-max-attempts: ${GAME_LOGIN_RATE_MAX_ATTEMPTS:10}
+    online-heartbeat-timeout-seconds: ${GAME_ONLINE_HEARTBEAT_TIMEOUT_SECONDS:180}
+    session-backup-interval-seconds: ${GAME_SESSION_BACKUP_INTERVAL_SECONDS:30}
+    online-sweep-ms: ${GAME_ONLINE_SWEEP_MS:30000}
+  auth:
+    max-online-accounts: ${GAME_AUTH_MAX_ONLINE_ACCOUNTS:10000}
+    token-ttl-hours: ${GAME_AUTH_TOKEN_TTL_HOURS:24}
+  uid:
+    # <0 时由 Redis 自动申请 workerId（K8s 友好）
+    worker-id: ${GAME_UID_WORKER_ID:-1}
+    datacenter-id: ${GAME_UID_DATACENTER_ID:1}
+    auto-claim-worker: ${GAME_UID_AUTO_CLAIM:true}
   netty:
+    enabled: ${GAME_NETTY_ENABLED:true}
     host: 0.0.0.0
     port: 8089
     # 玩家连接读空闲超时（秒）：超过该时间未收到任何数据则断开连接。
     read-idle-seconds: 60
+  # UDP/KCP：默认与 TCP 同端口；port=0 表示沿用 netty.port / ServerConfig
+  kcp:
+    enabled: ${GAME_KCP_ENABLED:true}
+    port: ${GAME_KCP_PORT:0}
+    interval: ${GAME_KCP_INTERVAL:20}
+    mtu: ${GAME_KCP_MTU:1400}
+    # 出站写缓冲水位；不可写时推送可丢弃（请求回包不受影响）
+    write-buffer-low-water-mark: ${GAME_KCP_WRITE_LOW:32768}
+    write-buffer-high-water-mark: ${GAME_KCP_WRITE_HIGH:65536}
+    drop-push-when-unwritable: ${GAME_KCP_DROP_PUSH:true}
+  gacha:
+    config-path: ${GAME_GACHA_CONFIG_PATH:config/gacha/Banners.json}
+    remote:
+      # true 时 player-service 通过 Feign 调用 gacha-service 内部 API（14xx）
+      enabled: ${GAME_GACHA_REMOTE_ENABLED:false}
+  npc-ai:
+    enabled: ${GAME_NPC_AI_ENABLED:true}
+    llm-enabled: ${GAME_NPC_AI_LLM_ENABLED:false}
+    api-key: ${GAME_NPC_AI_API_KEY:}
+    base-url: ${GAME_NPC_AI_BASE_URL:https://api.openai.com/v1}
+    model: ${GAME_NPC_AI_MODEL:gpt-4o-mini}
+    timeout-ms: ${GAME_NPC_AI_TIMEOUT_MS:15000}
+  shop:
+    products-path: ${GAME_SHOP_PRODUCTS_PATH:config/shop/products.json}
+    tabs-path: ${GAME_SHOP_TABS_PATH:config/shop/tabs.json}
+    remote:
+      # true 时 player-service 通过 Feign 调用 shop-service 内部 API（1601–1608）
+      enabled: ${GAME_SHOP_REMOTE_ENABLED:false}
+
+shop:
+  mq:
+    topic: ${SHOP_MQ_TOPIC:SHOP_EVENTS}
+  payment:
+    production-verify-enabled: ${SHOP_PAYMENT_PRODUCTION_VERIFY:false}
+    mock-enabled: ${SHOP_PAYMENT_MOCK_ENABLED:true}
+    channel-secrets:
+      wechat: ${SHOP_PAYMENT_CHANNEL_SECRET_WECHAT:}
+      alipay: ${SHOP_PAYMENT_CHANNEL_SECRET_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_CHANNEL_SECRET_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_CHANNEL_SECRET_GOOGLE_PLAY:}
+    verify-urls:
+      wechat: ${SHOP_PAYMENT_VERIFY_URL_WECHAT:}
+      alipay: ${SHOP_PAYMENT_VERIFY_URL_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_VERIFY_URL_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_VERIFY_URL_GOOGLE_PLAY:}
   auth:
     # 最大允许同时在线的账号数量（基于统一登录令牌统计）。
     max-online-accounts: 10000
@@ -100,6 +237,12 @@ game:
     push-enabled: true
     # 相同玩家同一数据类型触发去重窗口（毫秒）。
     dedupe-window-ms: 2000
+  upload:
+    storage-dir: ${GAME_UPLOAD_DIR:./data/uploads}
+  session-crypto:
+    rsa-private-key-base64: ${SESSION_RSA_PRIVATE_KEY:}
+    rsa-public-key-base64: ${SESSION_RSA_PUBLIC_KEY:}
+    session-ttl: 24h
 
   battle:
     remote:
@@ -109,6 +252,39 @@ game:
     remote:
       # true 时 player-service 通过 Feign 调用 activity-service 内部 API
       enabled: ${GAME_ACTIVITY_REMOTE_ENABLED:false}
+  scene:
+    remote:
+      enabled: ${GAME_SCENE_REMOTE_ENABLED:false}
+  chat:
+    remote:
+      enabled: ${GAME_CHAT_REMOTE_ENABLED:false}
+  bag:
+    remote:
+      enabled: ${GAME_BAG_REMOTE_ENABLED:false}
+  skill:
+    remote:
+      enabled: ${GAME_SKILL_REMOTE_ENABLED:false}
+  hall:
+    remote:
+      enabled: ${GAME_HALL_REMOTE_ENABLED:false}
+  quest:
+    config-path: ${GAME_QUEST_CONFIG_PATH:config/quest/Quests.json}
+    remote:
+      enabled: ${GAME_QUEST_REMOTE_ENABLED:false}
+  match:
+    remote:
+      enabled: ${GAME_MATCH_REMOTE_ENABLED:false}
+  update:
+    remote:
+      # true 时 player-service 通过 Feign 调用 update-service 内部 API（901/903）
+      enabled: ${GAME_UPDATE_REMOTE_ENABLED:false}
+  ai:
+    remote:
+      # true 时 player-service 通过 Feign 调用 ai-service 内部 API
+      enabled: ${GAME_AI_REMOTE_ENABLED:false}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
 
 # WebSocket（与文档一致的备用端口，可与 config/server.yml 对齐）
 server:
@@ -117,7 +293,7 @@ server:
   ssl:
     enabled: ${SERVER_SSL_ENABLED:false}
     key-store: ${SERVER_SSL_KEY_STORE:classpath:server.p12}
-    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:}
     key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
     key-alias: ${SERVER_SSL_KEY_ALIAS:server}
 
@@ -138,7 +314,14 @@ mq:
 
 battle:
   mq:
-    topic: BATTLE_EVENTS
+    topic: ${BATTLE_MQ_TOPIC:BATTLE_EVENTS}
+    activity-consumer-group: ${BATTLE_MQ_ACTIVITY_CONSUMER_GROUP:activity-battle-consumer}
+    quest-consumer-group: ${BATTLE_MQ_QUEST_CONSUMER_GROUP:quest-battle-consumer}
+  projection:
+    enabled: ${BATTLE_PROJECTION_ENABLED:true}
+    # 单体嵌入时活动/任务内部 API 在本进程，指向 player HTTP 端口
+    activity-url: ${ACTIVITY_SERVICE_URL:http://127.0.0.1:8989}
+    quest-url: ${QUEST_SERVICE_URL:http://127.0.0.1:8989}
 
 skill:
   mq:

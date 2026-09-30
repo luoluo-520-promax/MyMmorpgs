@@ -62,10 +62,27 @@ public class ConfigQueryService {
         return mapConfigRepository.findById(id).orElse(null); // 无记录返回 null，由上层返回「地图不存在」给客户端
     }
 
+    /** 加载全部地图配置；场景节点向 Center 注册时枚举本节点可承载 sceneId */
+    @Cacheable(cacheNames = "allMapConfigs")
+    public List<MapConfig> listAllMaps() {
+        return mapConfigRepository.findAll();
+    }
+
     /** 加载全部怪物配置；整表缓存，供刷怪系统、GM 工具、战斗匹配一次性读取 */
     @Cacheable(cacheNames = "allMonsterConfigs") // 整表缓存，策划热更后需 evict 或 TTL 过期
     public List<MonsterConfig> listAllMonsters() {
         return monsterConfigRepository.findAll(); // 返回 DB 中全部怪物模板
+    }
+
+    /**
+     * 按地图刷怪：优先 map_id 匹配；若该图无配置则回退全表（兼容旧数据）。
+     */
+    public List<MonsterConfig> listMonstersForMap(int mapId) {
+        List<MonsterConfig> byMap = monsterConfigRepository.findByMapId(mapId);
+        if (byMap != null && !byMap.isEmpty()) {
+            return byMap;
+        }
+        return listAllMonsters();
     }
 
     /** 按怪物模板 ID 查单条；战斗开始时加载怪物 HP/攻击/技能列表 */

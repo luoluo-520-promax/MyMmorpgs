@@ -1,0 +1,109 @@
+spring:
+  application:
+    name: shop-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        fail-fast: ${NACOS_DISCOVERY_FAIL_FAST:false}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: ${NACOS_CONFIG_ENABLED:false}
+        import-check:
+          enabled: false
+    openfeign:
+      client:
+        config:
+          bag-service:
+            url: ${BAG_SERVICE_URL:http://127.0.0.1:8983}
+          activity-service:
+            url: ${ACTIVITY_SERVICE_URL:http://127.0.0.1:8992}
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_PLAYER:player_db}?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+
+server:
+  port: 8990
+
+game:
+  shop:
+    products-path: ${GAME_SHOP_PRODUCTS_PATH:config/shop/products.json}
+    tabs-path: ${GAME_SHOP_TABS_PATH:config/shop/tabs.json}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+  port:
+    remote:
+      enabled: ${GAME_PORT_REMOTE_ENABLED:false}
+      player-service-url: ${PLAYER_SERVICE_URL:http://127.0.0.1:8989}
+      bag-service-url: ${BAG_SERVICE_URL:http://127.0.0.1:8983}
+  mq:
+    outbox:
+      poll-ms: ${GAME_MQ_OUTBOX_POLL_MS:2000}
+
+shop:
+  mq:
+    topic: ${SHOP_MQ_TOPIC:SHOP_EVENTS}
+  reconcile:
+    auto-enabled: ${SHOP_RECONCILE_AUTO_ENABLED:false}
+    cron: ${SHOP_RECONCILE_CRON:0 0 * * * *}
+    lookback-ms: ${SHOP_RECONCILE_LOOKBACK_MS:86400000}
+    mismatch-alert-threshold: ${SHOP_RECONCILE_MISMATCH_ALERT_THRESHOLD:5}
+  payment:
+    production-verify-enabled: ${SHOP_PAYMENT_PRODUCTION_VERIFY:false}
+    mock-enabled: ${SHOP_PAYMENT_MOCK_ENABLED:true}
+    channel-secrets:
+      wechat: ${SHOP_PAYMENT_CHANNEL_SECRET_WECHAT:}
+      alipay: ${SHOP_PAYMENT_CHANNEL_SECRET_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_CHANNEL_SECRET_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_CHANNEL_SECRET_GOOGLE_PLAY:}
+    verify-urls:
+      wechat: ${SHOP_PAYMENT_VERIFY_URL_WECHAT:}
+      alipay: ${SHOP_PAYMENT_VERIFY_URL_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_VERIFY_URL_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_VERIFY_URL_GOOGLE_PLAY:}
+    adapters:
+      apple:
+        sandbox: ${SHOP_PAYMENT_APPLE_SANDBOX:true}
+        enabled: ${SHOP_PAYMENT_APPLE_ENABLED:true}
+      google:
+        sandbox: ${SHOP_PAYMENT_GOOGLE_SANDBOX:true}
+        enabled: ${SHOP_PAYMENT_GOOGLE_ENABLED:true}
+      alipay:
+        sandbox: ${SHOP_PAYMENT_ALIPAY_SANDBOX:true}
+        enabled: ${SHOP_PAYMENT_ALIPAY_ENABLED:true}
+      wechat:
+        sandbox: ${SHOP_PAYMENT_WECHAT_SANDBOX:true}
+        enabled: ${SHOP_PAYMENT_WECHAT_ENABLED:true}
+
+rocketmq:
+  enabled: ${ROCKETMQ_ENABLED:false}
+  name-server: ${ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
+  producer:
+    group: shop-producer-group
+    send-message-timeout: 3000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

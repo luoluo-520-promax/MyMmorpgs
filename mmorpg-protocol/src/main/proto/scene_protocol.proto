@@ -1,0 +1,372 @@
+syntax = "proto3";
+
+package mmorpg.scene;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "SceneProtocolProto";
+
+// ---------- 实体与公共结构 ----------
+
+message EntityInfo {
+  uint64 entity_id = 1;
+  uint32 entity_type = 2;
+  float pos_x = 3;
+  float pos_y = 4;
+  float pos_z = 5;
+  string name = 6;
+  uint32 level = 7;
+  uint32 model_id = 8;
+}
+
+message AttrUpdate {
+  uint64 entity_id = 1;
+  uint32 attr_type = 2;
+  uint32 new_value = 3;
+}
+
+// ---------- 101 / 102 进入场景 ----------
+
+message EnterSceneCsReq {
+  uint32 scene_id = 1;
+  uint32 line_id = 2;
+  uint32 entry_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  // 跨节点迁移票据：目标节点 EnterScene 时携带，服务端一次性消费
+  string session_ticket = 7;
+}
+
+message EnterSceneScRsp {
+  int32 retcode = 1;
+  uint32 scene_id = 2;
+  uint32 line_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  repeated EntityInfo entity_list = 7;
+}
+
+// ---------- 103 / 104 当前场景信息 ----------
+
+message GetCurSceneInfoCsReq {}
+
+message GetCurSceneInfoScRsp {
+  int32 retcode = 1;
+  uint32 scene_id = 2;
+  uint32 line_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  repeated EntityInfo entity_list = 7;
+}
+
+// ---------- 105 / 106 移动 ----------
+
+/** 服务端权威移动状态：攀爬/游泳/滑翔/钩锁/载具/空中冲刺/壁走等须带类型做准入与体力校验 */
+enum MovementType {
+  MOVE_WALK = 0;
+  MOVE_SWIM = 1;
+  MOVE_CLIMB = 2;
+  MOVE_GLIDE = 3;
+  MOVE_SWING = 4;
+  MOVE_DASH = 5;
+  MOVE_GRAPPLE = 6;
+  MOVE_RIDE = 7;
+  MOVE_AIR_DASH = 8;
+  MOVE_WALL_RUN = 9;
+  MOVE_CLIMB_HANG = 10;
+  MOVE_CLIMB_VAULT = 11;
+}
+
+/** 动作状态机分层：空中/地面/攀爬攻击 */
+enum ActionState {
+  ACTION_GROUND_IDLE = 0;
+  ACTION_GROUND_RUN = 1;
+  ACTION_AIR_NORMAL = 2;
+  ACTION_AIR_HEAVY = 3;
+  ACTION_CLIMB_ATTACK = 4;
+  ACTION_SWIM_ATTACK = 5;
+}
+
+/** 摄像机相对移动意图 */
+enum MoveIntent {
+  MOVE_INTENT_FORWARD = 0;
+  MOVE_INTENT_BACKWARD = 1;
+  MOVE_INTENT_LEFT = 2;
+  MOVE_INTENT_RIGHT = 3;
+}
+
+message MoveCsReq {
+  float target_x = 1;
+  float target_y = 2;
+  float target_z = 3;
+  float speed = 4;
+  uint64 timestamp = 5;
+  // 移动状态机类型；缺省视为 WALK
+  MovementType movement_type = 6;
+  // 攀爬时客户端上报的可攀爬网格 Id（服务端再校验）
+  string climbable_mesh_id = 7;
+  // 极限操作位掩码：MID_AIR_DASH / WALL_KICK / WALL_RUN
+  uint32 move_flags = 8;
+  // 骑乘生物实例
+  string mount_creature_uid = 9;
+  // 钩锁锚点
+  string grapple_node_id = 10;
+  // 壁走墙面法线（服务端校验夹角后回写吸附）
+  float wall_normal_x = 11;
+  float wall_normal_y = 12;
+  float wall_normal_z = 13;
+  ActionState action_state = 14;
+  MoveIntent move_intent = 15;
+  float camera_yaw = 16;
+  uint32 client_delta_ms = 17;
+}
+
+message GrapplePredictCsReq {
+  string target_point_hash = 1;
+  float vel_x = 2;
+  float vel_y = 3;
+  float vel_z = 4;
+  string grapple_node_id = 5;
+}
+
+message GrapplePredictScRsp {
+  int32 retcode = 1;
+  bool ack = 2;
+  string audit_token = 3;
+}
+
+message VaultCsReq {
+  string climbable_mesh_id = 1;
+  float edge_x = 2;
+  float edge_y = 3;
+  float edge_z = 4;
+}
+
+message VaultScRsp {
+  int32 retcode = 1;
+  float stand_x = 2;
+  float stand_y = 3;
+  float stand_z = 4;
+}
+
+message MoveScRsp {
+  int32 retcode = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  float pos_z = 4;
+  // 当前体力（攀爬/滑翔/游泳消耗后回写）
+  float stamina = 5;
+  MovementType movement_type = 6;
+  uint32 move_flags = 7;
+  float wall_normal_x = 8;
+  float wall_normal_y = 9;
+  float wall_normal_z = 10;
+}
+
+// ---------- P15 移动增量同步（BaseState + DeltaState 位掩码） ----------
+
+message MoveBaseState {
+  uint64 entity_id = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  float pos_z = 4;
+  float speed = 5;
+  MovementType movement_type = 6;
+  float camera_yaw = 7;
+  ActionState action_state = 8;
+  uint32 move_flags = 9;
+  string physics_state_hash = 10;
+}
+
+message MoveDeltaState {
+  uint64 entity_id = 1;
+  uint32 changed_mask = 2;
+  float pos_x = 3;
+  float pos_y = 4;
+  float pos_z = 5;
+  float speed = 6;
+  MovementType movement_type = 7;
+  float camera_yaw = 8;
+  ActionState action_state = 9;
+  uint32 move_flags = 10;
+  string physics_state_hash = 11;
+}
+
+message MoveDeltaScNotify {
+  repeated MoveDeltaState deltas = 1;
+}
+
+message MoveAckBatchCsReq {
+  uint64 server_seq = 1;
+  float pos_x = 2;
+  float pos_y = 3;
+  float pos_z = 4;
+  uint64 client_ts = 5;
+}
+
+message MoveAckBatchScRsp {
+  int32 retcode = 1;
+  bool merged = 2;
+  uint32 frames_merged = 3;
+}
+
+// ---------- 瞬时博弈：完美闪避 / 弹反 ----------
+message PerfectDodgeCsReq {
+  string attack_id = 1;
+  string battle_id = 2;
+  uint64 client_ts = 3;
+}
+
+message PerfectDodgeScRsp {
+  int32 retcode = 1;
+  bool success = 2;
+  uint32 dodge_window_ms = 3;
+  bool bullet_time = 4;
+  double time_scale = 5;
+  uint64 bullet_time_end_ms = 6;
+  uint32 perfect_dodge_count = 7;
+}
+
+message ParryCsReq {
+  string attack_id = 1;
+  string battle_id = 2;
+  uint64 client_ts = 3;
+}
+
+message ParryScRsp {
+  int32 retcode = 1;
+  bool success = 2;
+  uint32 parry_window_ms = 3;
+  uint32 stun_attacker_ms = 4;
+}
+
+// ---------- 107 实体同步通知 ----------
+
+message SyncEntityScNotify {
+  uint32 sync_type = 1;
+  repeated EntityInfo entity_list = 2;
+  repeated uint64 leave_entity_ids = 3;
+  repeated AttrUpdate attr_updates = 4;
+}
+
+// ---------- 108 / 109 切换线路 ----------
+
+message SwitchLineCsReq {
+  uint32 target_line_id = 1;
+}
+
+message SwitchLineScRsp {
+  int32 retcode = 1;
+  uint32 scene_id = 2;
+  uint32 line_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  repeated EntityInfo entity_list = 7;
+}
+
+// ---------- 110 / 111 周围实体 ----------
+
+message GetNearbyEntitiesCsReq {
+  float center_x = 1;
+  float center_y = 2;
+  float center_z = 3;
+  float radius = 4;
+}
+
+message GetNearbyEntitiesScRsp {
+  int32 retcode = 1;
+  repeated EntityInfo entity_list = 2;
+}
+
+// ---------- 112 / 113 跨场景传送 ----------
+
+message TransferSceneCsReq {
+  uint32 target_scene_id = 1;
+  uint32 target_line_id = 2;
+  uint32 entry_id = 3;
+}
+
+message TransferSceneScRsp {
+  int32 retcode = 1;
+  uint32 scene_id = 2;
+  uint32 line_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  repeated EntityInfo entity_list = 7;
+  // 跨节点迁移（对齐 MyLunarCore）：retcode=SCENE_TRANSFER_REDIRECT 时客户端应携带 ticket 重连
+  string redirect_host = 8;
+  uint32 redirect_port = 9;
+  string session_ticket = 10;
+}
+
+// ---------- 114 / 115 / 116 遭遇转场（路线 B：大世界外壳 → 关卡遭遇战） ----------
+
+message EnterEncounterCsReq {
+  uint64 scene_entity_id = 1;
+  uint32 lineup_id = 2;
+  uint32 battle_type = 3;
+}
+
+message EnterEncounterScRsp {
+  int32 retcode = 1;
+  uint64 battle_id = 2;
+  uint32 scene_id = 3;
+  uint64 scene_entity_id = 4;
+  float return_pos_x = 5;
+  float return_pos_y = 6;
+  float return_pos_z = 7;
+}
+
+message EnterEncounterScNotify {
+  uint64 battle_id = 1;
+  uint32 scene_id = 2;
+  uint64 scene_entity_id = 3;
+  float return_pos_x = 4;
+  float return_pos_y = 5;
+  float return_pos_z = 6;
+}
+
+message ExitEncounterCsReq {
+  uint64 battle_id = 1;
+  uint32 result = 2;
+}
+
+message ExitEncounterScRsp {
+  int32 retcode = 1;
+  uint64 battle_id = 2;
+  uint32 scene_id = 3;
+  float return_pos_x = 4;
+  float return_pos_y = 5;
+  float return_pos_z = 6;
+}
+
+message ExitEncounterScNotify {
+  uint64 battle_id = 1;
+  uint32 scene_id = 2;
+  uint32 result = 3;
+  float return_pos_x = 4;
+  float return_pos_y = 5;
+  float return_pos_z = 6;
+}
+
+// ---------- 120 / 121 断线重连恢复场景 ----------
+
+message ResumeSceneCsReq {
+  string resume_token = 1;
+}
+
+message ResumeSceneScRsp {
+  int32 retcode = 1;
+  uint32 scene_id = 2;
+  uint32 line_id = 3;
+  float pos_x = 4;
+  float pos_y = 5;
+  float pos_z = 6;
+  repeated EntityInfo entity_list = 7;
+  string resume_token = 8;
+}

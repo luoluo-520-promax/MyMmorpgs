@@ -37,4 +37,13 @@ public interface PlayerNotificationPort {
     default void unbind(long playerId) {
         // no-op
     }
+
+    /**
+     * 踢线：下行 Kick 通知后关闭本节点连接。默认 no-op。
+     *
+     * @param reason 1=重复登录 2=运维 3=令牌失效
+     */
+    default void kick(long playerId, int reason, String message) {
+        // no-op
+    }
 }

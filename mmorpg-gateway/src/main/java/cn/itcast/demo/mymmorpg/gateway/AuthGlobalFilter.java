@@ -17,7 +17,8 @@ import org.springframework.data.redis.core.StringRedisTemplate; // 从 Redis 读
 import org.springframework.http.HttpHeaders; // 读取 Authorization / X-Auth-Token 请求头
 import org.springframework.http.HttpStatus; // 认证失败时返回 401 UNAUTHORIZED
 import org.springframework.http.MediaType; // 设置响应 Content-Type 为 application/json
-import org.springframework.http.server.reactive.ServerHttpRequest; // 响应式请求对象，用于 mutate 追加 X-Account-Id 头
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.util.UriComponentsBuilder; // 响应式请求对象，用于 mutate 追加 X-Account-Id 头
 import org.springframework.stereotype.Component; // 注册为 Spring Bean，由 Gateway 自动纳入过滤器链
 import org.springframework.util.AntPathMatcher; // 支持 /ws、/actuator/** 等 Ant 风格白名单路径匹配
 import org.springframework.web.server.ServerWebExchange; // 封装当前 HTTP 请求与响应的上下文
@@ -76,12 +77,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered { // 实现 Globa
         }
         // 取 URI 路径部分（不含 query），用于白名单匹配，例如 /api/player/1
         String path = exchange.getRequest().getURI().getPath();
-        // WebSocket 握手 /ws 等路径无需 Token，直接转发给 ws-service
         if (isWhitelisted(path, authProperties.getWhitelist())) {
             return chain.filter(exchange);
         }
-        // 优先从 Authorization: Bearer xxx 解析，否则读 X-Auth-Token 头
-        String token = resolveToken(exchange.getRequest().getHeaders());
+        if (isWebSocketUpgrade(exchange.getRequest())) {
+            return handleWebSocketUpgrade(exchange, chain);
+        }
+        String token = resolveToken(exchange.getRequest().getHeaders(), exchange.getRequest().getURI());
 
         // 客户端未携带任何 Token，返回 401 及中文提示「缺少认证令牌」
         if (token == null || token.isBlank()) {
@@ -132,19 +134,51 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered { // 实现 Globa
         return false;
     }
 
+    private Mono<Void> handleWebSocketUpgrade(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String token = resolveToken(exchange.getRequest().getHeaders(), exchange.getRequest().getURI());
+        if (token == null || token.isBlank()) {
+            return chain.filter(exchange);
+        }
+        String accountId = redisTemplate.opsForValue().get(AUTH_TOKEN_PREFIX + token);
+        if (accountId == null || accountId.isBlank()) {
+            return writeUnauthorized(exchange, "认证令牌无效或已过期");
+        }
+        ServerHttpRequest request = exchange.getRequest().mutate()
+                .header(HEADER_ACCOUNT_ID, accountId)
+                .build();
+        return chain.filter(exchange.mutate().request(request).build());
+    }
+
+    private boolean isWebSocketUpgrade(ServerHttpRequest request) {
+        return request.getHeaders().containsKey("Sec-WebSocket-Key");
+    }
+
     /**
-     * 从 HTTP 头解析 Token：标准 OAuth2 Bearer 格式优先，否则读自定义 X-Auth-Token。
-     *
-     * @param headers 当前请求的 HTTP 头集合
-     * @return 纯 Token 字符串（不含 Bearer 前缀），无 Token 时返回 null
+     * 从 HTTP 头或 query 参数解析 Token：标准 OAuth2 Bearer 格式优先，否则读 X-Auth-Token / ?token=
+     */
+    private String resolveToken(HttpHeaders headers, java.net.URI uri) {
+        String auth = headers.getFirst(HttpHeaders.AUTHORIZATION);
+        if (auth != null && auth.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            return auth.substring(7).trim();
+        }
+        String headerToken = headers.getFirst(HEADER_AUTH_TOKEN);
+        if (headerToken != null && !headerToken.isBlank()) {
+            return headerToken.trim();
+        }
+        if (uri != null) {
+            String queryToken = UriComponentsBuilder.fromUri(uri).build().getQueryParams().getFirst("token");
+            if (queryToken != null && !queryToken.isBlank()) {
+                return queryToken.trim();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @deprecated 保留兼容；请使用 {@link #resolveToken(HttpHeaders, java.net.URI)}。
      */
     private String resolveToken(HttpHeaders headers) {
-        String auth = headers.getFirst(HttpHeaders.AUTHORIZATION);
-        // regionMatches 忽略大小写比较前 7 字符是否为 "Bearer "，兼容 bearer/Bearer
-        if (auth != null && auth.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            return auth.substring(7).trim(); // 去掉 "Bearer " 前缀并去除首尾空白
-        }
-        return headers.getFirst(HEADER_AUTH_TOKEN); // 移动端或 WebSocket 可能只传 X-Auth-Token
+        return resolveToken(headers, null);
     }
 
     /**

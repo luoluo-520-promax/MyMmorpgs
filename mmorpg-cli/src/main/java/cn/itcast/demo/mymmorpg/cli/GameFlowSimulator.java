@@ -66,7 +66,8 @@ final class GameFlowSimulator {
         }
         String token = "tok-" + account + "-" + System.currentTimeMillis();
         System.out.printf("  账号: %s  密码: %s%n", account, mask(password));
-        System.out.printf("  ✓ 登录成功  token=%s...%n", token.substring(0, Math.min(20, token.length())));
+        System.out.printf("  ✓ 登录成功（离线模拟） token=%s...%n", token.substring(0, Math.min(20, token.length())));
+        System.out.println("  提示: 使用 `connect --account ...` 连接真实服务器获取 token");
         System.out.printf("  角色列表: [%s Lv.%d] [无名侠 Lv.10]%n", playerName, playerLevel);
         System.out.println();
 

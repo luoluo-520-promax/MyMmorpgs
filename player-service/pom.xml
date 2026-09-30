@@ -21,7 +21,8 @@
             <artifactId>mmorpg-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 单体模式（remote=false）时嵌入各域服务实现类 -->
+        <!-- 单体模式（remote=false）时嵌入各域服务实现类。
+             微服务网关目标：去掉下列依赖、仅保留 Feign；路线见 docs/architecture-gateway.md -->
         <dependency>
             <groupId>cn.itcast.demo</groupId>
             <artifactId>scene-service</artifactId>
@@ -34,17 +35,27 @@
         </dependency>
         <dependency>
             <groupId>cn.itcast.demo</groupId>
-            <artifactId>bag-service</artifactId>
+            <artifactId>hall-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>quest-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>matchmaking-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>gacha-service</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.itcast.demo</groupId>
             <artifactId>skill-service</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>cn.itcast.demo</groupId>
-            <artifactId>admin-service</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -57,6 +68,16 @@
             <artifactId>activity-service</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>update-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>shop-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -65,6 +86,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <!-- KCP over Netty（与 TCP 同端口 UDP）；排除自带 netty-transport，对齐 mmorpg-common 的 netty-all -->
+        <dependency>
+            <groupId>io.jpower.kcp</groupId>
+            <artifactId>kcp-netty</artifactId>
+            <version>1.5.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -106,6 +139,14 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -116,6 +157,13 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <version>7.9.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>cn.itcast.demo</groupId>
+            <artifactId>mmorpg-common</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -185,5 +233,35 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- 默认嵌入 Admin / Bag；gateway 编译验证可用 -P'!embed-admin' / -P'!embed-bag' 去掉对应 JAR -->
+    <profiles>
+        <profile>
+            <id>embed-admin</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>cn.itcast.demo</groupId>
+                    <artifactId>admin-service</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>embed-bag</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>cn.itcast.demo</groupId>
+                    <artifactId>bag-service</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
 

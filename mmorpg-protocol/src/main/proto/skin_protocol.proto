@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package mmorpg.skin;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "SkinProtocolProto";
+
+message SkinInfo {
+  uint32 skin_id = 1;
+  string name = 2;
+  uint32 rarity = 3;
+  string resource_key = 4;
+  string preview_icon = 5;
+  string obtain_tips = 6;
+  bool owned = 7;
+  bool equipped = 8;
+  bool is_default = 9;
+}
+
+message GetWardrobeCsReq {}
+
+message GetWardrobeScRsp {
+  int32 retcode = 1;
+  uint32 equipped_skin_id = 2;
+  repeated SkinInfo skins = 3;
+}
+
+message EquipSkinCsReq {
+  uint32 skin_id = 1;
+}
+
+message EquipSkinScRsp {
+  int32 retcode = 1;
+  uint32 equipped_skin_id = 2;
+}
+
+message UnequipSkinCsReq {}
+
+message UnequipSkinScRsp {
+  int32 retcode = 1;
+  uint32 equipped_skin_id = 2;
+}

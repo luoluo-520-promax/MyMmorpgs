@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="shop-service-integration" parallel="none">
+    <test name="shop-integration">
+        <!-- 订单/支付 IT 占位；后续可补 MySQL+Redis 沙箱验签与 MQ 充值进度 -->
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.ShopServiceTest"/>
+        </classes>
+    </test>
+</suite>

@@ -8,13 +8,16 @@
  */
 package cn.itcast.demo.mymmorpg.gateway; // 声明当前类所属的 Java 包，与目录结构 cn/itcast/demo/mymmorpg/gateway 对应
 
+import cn.itcast.demo.mymmorpg.gateway.sticky.AccountStickyLoadBalancerConfig;
 import org.springframework.boot.SpringApplication; // 提供 run 方法，负责创建 Spring 应用上下文并启动嵌入式 Netty 容器
 import org.springframework.boot.autoconfigure.SpringBootApplication; // 组合注解：启用自动配置、组件扫描（默认扫描本包及子包）
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan; // 自动扫描并注册带 @ConfigurationProperties 的配置类（如 GatewayAuthProperties）
+import org.springframework.cloud.loadbalancer.annotation.LoadBalancerClients;
 
 
 @SpringBootApplication // 标记为 Spring Boot 主应用，Gateway 模块所有 @Component/@Configuration 均在此包下被扫描
 @ConfigurationPropertiesScan // 无需在每个 Properties 类上单独 @EnableConfigurationProperties，启动时统一扫描绑定 yml 配置
+@LoadBalancerClients(defaultConfiguration = AccountStickyLoadBalancerConfig.class)
 public class GatewayApplication { // MMORPG 网关微服务的 JVM 进程入口类
 
     /**

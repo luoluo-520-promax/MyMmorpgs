@@ -1,0 +1,48 @@
+# Redis 主从 + Sentinel（P1 HA）
+# 启动：docker compose -f docker-compose.redis-sentinel.yml up -d
+# Spring 配置：SPRING_PROFILES_ACTIVE=...,redis-sentinel
+#
+# 客户端连任意 Sentinel（宿主机映射 26379），master 名 mymmorpg-redis
+
+services:
+  redis-master:
+    image: redis:7-alpine
+    container_name: mmorpg-redis-master
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis-replica:
+    image: redis:7-alpine
+    container_name: mmorpg-redis-replica
+    command: ["redis-server", "--replicaof", "redis-master", "6379", "--appendonly", "yes"]
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis-sentinel:
+    image: redis:7-alpine
+    container_name: mmorpg-redis-sentinel
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica:
+        condition: service_healthy
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./docker/redis/sentinel.conf:/etc/redis/sentinel.conf:ro
+    command: ["redis-sentinel", "/etc/redis/sentinel.conf"]
+    restart: unless-stopped

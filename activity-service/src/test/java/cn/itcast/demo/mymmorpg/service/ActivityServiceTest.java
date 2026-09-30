@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -332,7 +333,7 @@ public class ActivityServiceTest {
                 rsp.getRetcode(), rsp.getClaimedCount(), rsp.getRewardItemsCount());
 
         assertThat(rsp.getRetcode()).isEqualTo(ActivityRetCode.CONDITION_NOT_MET);
-        verify(activityItemGrantPort, never()).grantItemsForActivity(anyLong(), anyList());
+        verify(activityItemGrantPort, never()).grantItemsForActivity(anyLong(), anyString(), anyList());
     }
 
     @Test
@@ -431,7 +432,7 @@ public class ActivityServiceTest {
         when(progressStore.loadOrCreate(playerId, activityId)).thenReturn(new PlayerActivityProgress());
         when(activityPolicy.allowClaimReward(anyInt(), anyLong(), anyLong(), anyInt(), any()))
                 .thenReturn(true);
-        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyList()))
+        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyString(), anyList()))
                 .thenReturn(BagRetCode.BAG_FULL);
 
         ClaimActivityRewardCsReq req = ClaimActivityRewardCsReq.newBuilder()
@@ -474,7 +475,7 @@ public class ActivityServiceTest {
         when(progressStore.loadOrCreate(playerId, activityId)).thenReturn(progress);
         when(activityPolicy.allowClaimReward(anyInt(), anyLong(), anyLong(), anyInt(), any()))
                 .thenReturn(true);
-        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyList()))
+        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyString(), anyList()))
                 .thenReturn(BagRetCode.OK);
 
         ClaimActivityRewardCsReq req = ClaimActivityRewardCsReq.newBuilder()
@@ -531,7 +532,7 @@ public class ActivityServiceTest {
         when(progressStore.loadOrCreate(playerId, activityId)).thenReturn(new PlayerActivityProgress());
         when(activityPolicy.allowClaimReward(anyInt(), anyLong(), anyLong(), anyInt(), any()))
                 .thenReturn(true);
-        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyList()))
+        when(activityItemGrantPort.grantItemsForActivity(eq(playerId), anyString(), anyList()))
                 .thenReturn(BagRetCode.OK);
 
         ClaimActivityRewardCsReq req = ClaimActivityRewardCsReq.newBuilder()

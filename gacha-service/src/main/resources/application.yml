@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: gacha-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+    openfeign:
+      client:
+        config:
+          bag-service:
+            url: ${BAG_SERVICE_URL:http://127.0.0.1:8983}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8994
+
+game:
+  gacha:
+    config-path: ${GAME_GACHA_CONFIG_PATH:config/gacha/Banners.json}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+  port:
+    remote:
+      enabled: ${GAME_PORT_REMOTE_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

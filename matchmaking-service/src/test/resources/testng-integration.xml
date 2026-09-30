@@ -1,0 +1,6 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="matchmaking-service-integration" parallel="none">
+    <test name="matchmaking-integration">
+        <!-- 暂无集成测试，占位以便 -Pintegration-tests 可跑通 -->
+    </test>
+</suite>

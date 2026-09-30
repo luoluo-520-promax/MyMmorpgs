@@ -1,0 +1,24 @@
+{
+  "versionCode": "2.0.0",
+  "versionNumber": 20000,
+  "minClientVersionNumber": 15000,
+  "baseUrl": "https://cdn.example.com/mmorpg/2.0.0/",
+  "patchToolVersion": "2.1.0",
+  "resourcePacks": [
+    {"path": "assets/ui/main_v2.bundle", "checksum": "res111", "size": 2048000, "packType": "resource"},
+    {"path": "assets/scene/city_v2.bundle", "checksum": "res222", "size": 4096000, "packType": "resource"}
+  ],
+  "audioLanguagePacks": [
+    {"path": "audio/zh-CN/voice_v2.pak", "checksum": "aud333", "size": 1024000, "packType": "audio"},
+    {"path": "audio/en-US/voice_v2.pak", "checksum": "aud444", "size": 1024000, "packType": "audio"}
+  ],
+  "configFiles": [
+    {"path": "config/activity.json", "checksum": "cfg555", "size": 16384, "packType": "config"},
+    {"path": "config/client_settings.json", "checksum": "cfg666", "size": 8192, "packType": "config"}
+  ],
+  "deleteFiles": [
+    "assets/ui/main.bundle",
+    "assets/ui/old_main.bundle",
+    "config/legacy_activity.json"
+  ]
+}

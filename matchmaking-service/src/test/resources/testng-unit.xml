@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="matchmaking-service-unit">
+    <test name="matchmaking-unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.MatchmakingServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.MatchmakingEnhancementFlowTest"/>
+        </classes>
+    </test>
+</suite>

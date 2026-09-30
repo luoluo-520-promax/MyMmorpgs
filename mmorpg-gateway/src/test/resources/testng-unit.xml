@@ -4,6 +4,7 @@
         <packages>
             <package name="cn.itcast.demo.mymmorpg.gateway"/>
             <package name="cn.itcast.demo.mymmorpg.gateway.config"/>
+            <package name="cn.itcast.demo.mymmorpg.gateway.sticky"/>
         </packages>
     </test>
 </suite>

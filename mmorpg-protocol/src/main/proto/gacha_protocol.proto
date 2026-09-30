@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package mmorpg.gacha;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "GachaProtocolProto";
+
+message GachaBannerInfo {
+  uint32 banner_id = 1;
+  uint32 banner_type = 2;
+  string name = 3;
+  int64 begin_time = 4;
+  int64 end_time = 5;
+  uint32 pity5 = 6;
+  uint32 pity4 = 7;
+  repeated uint32 rate_up_items5 = 8;
+  repeated uint32 rate_up_items4 = 9;
+}
+
+message GetGachaInfoCsReq {}
+
+message GetGachaInfoScRsp {
+  int32 retcode = 1;
+  repeated GachaBannerInfo banners = 2;
+  uint32 ceiling_num = 3;
+  uint32 ceiling_claimed = 4;
+}
+
+message DoGachaCsReq {
+  uint32 banner_type = 1;
+  uint32 times = 2;
+}
+
+message GachaItem {
+  uint32 item_id = 1;
+  uint32 rarity = 2;
+}
+
+message DoGachaScRsp {
+  int32 retcode = 1;
+  repeated GachaItem items = 2;
+  uint32 pity5 = 3;
+  uint32 pity4 = 4;
+  uint32 ceiling_num = 5;
+}
+
+message ExchangeGachaCeilingCsReq {}
+
+message ExchangeGachaCeilingScRsp {
+  int32 retcode = 1;
+  uint32 item_id = 2;
+  uint32 ceiling_claimed = 3;
+}
+
+message GetGachaHistoryCsReq {
+  uint32 limit = 1;
+}
+
+message GachaHistoryEntry {
+  uint32 item_id = 1;
+  uint32 rarity = 2;
+  uint32 banner_type = 3;
+  int64 created_at = 4;
+}
+
+message GetGachaHistoryScRsp {
+  int32 retcode = 1;
+  repeated GachaHistoryEntry entries = 2;
+}

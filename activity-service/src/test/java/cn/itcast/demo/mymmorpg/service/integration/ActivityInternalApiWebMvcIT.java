@@ -37,7 +37,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = InternalActivityController.class)
 @ContextConfiguration(classes = ActivityWebMvcTestApplication.class) // 避免 IDE 找不到 @SpringBootConfiguration
-@TestPropertySource(properties = "spring.application.name=activity-service") // 满足 Controller @ConditionalOnProperty
+@TestPropertySource(properties = {
+        "spring.application.name=activity-service",
+        "game.internal-api.enabled=false"
+})
 public class ActivityInternalApiWebMvcIT extends AbstractTestNGSpringContextTests { // WebMvc 集成测试
 
     /** 注入 MockMvc 模拟 HTTP 请求。 */

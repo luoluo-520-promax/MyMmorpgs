@@ -1,0 +1,31 @@
+{
+  "banners": [
+    {
+      "id": 1,
+      "bannerType": 2,
+      "name": "常驻卡池",
+      "beginTime": 0,
+      "endTime": 4102444800000,
+      "rateUpItems5": [10001, 10002],
+      "rateUpItems4": [20001, 20002, 20003]
+    },
+    {
+      "id": 11,
+      "bannerType": 11,
+      "name": "限定角色UP",
+      "beginTime": 0,
+      "endTime": 4102444800000,
+      "rateUpItems5": [11001],
+      "rateUpItems4": [21001, 21002]
+    },
+    {
+      "id": 12,
+      "bannerType": 12,
+      "name": "限定光锥UP",
+      "beginTime": 0,
+      "endTime": 4102444800000,
+      "rateUpItems5": [12001],
+      "rateUpItems4": [22001, 22002]
+    }
+  ]
+}

@@ -23,4 +23,14 @@ public interface PlayerProgressPort {
      * add经验；参数：Player player, int expReward
      */
     Player addExp(Player player, int expReward);
+
+    /**
+     * 消耗金币；不足时返回 null。
+     */
+    Player spendGold(Player player, long amount);
+
+    /**
+     * 增加金币。
+     */
+    Player addGold(Player player, long amount);
 }

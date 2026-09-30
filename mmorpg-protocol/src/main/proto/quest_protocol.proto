@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package mmorpg.quest;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "QuestProtocolProto";
+
+message QuestInfo {
+  uint32 quest_id = 1;
+  string name = 2;
+  string description = 3;
+  uint32 quest_type = 4; // 1=main 2=side 3=daily
+  uint32 status = 5; // 0=available 1=accepted 2=completed 3=claimed
+  uint32 progress = 6;
+  uint32 target = 7;
+  uint32 exp_reward = 8;
+  uint32 gold_reward = 9;
+}
+
+message GetQuestListCsReq {}
+
+message GetQuestListScRsp {
+  int32 retcode = 1;
+  repeated QuestInfo quests = 2;
+}
+
+message AcceptQuestCsReq {
+  uint32 quest_id = 1;
+}
+
+message AcceptQuestScRsp {
+  int32 retcode = 1;
+  QuestInfo quest = 2;
+}
+
+message ClaimQuestRewardCsReq {
+  uint32 quest_id = 1;
+}
+
+message ClaimQuestRewardScRsp {
+  int32 retcode = 1;
+  uint32 quest_id = 2;
+  uint32 exp_gained = 3;
+  uint32 gold_gained = 4;
+}

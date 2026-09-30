@@ -6,37 +6,49 @@
  */
 package cn.itcast.demo.mymmorpg.service;
 
-import cn.itcast.demo.mymmorpg.model.BattleSceneFactory; // 战斗场景工厂，用于创建战斗运行时状态对象
-import cn.itcast.demo.mymmorpg.service.BattleEventPublisher; // 战斗事件发布器（RocketMQ 或空实现）
-import cn.itcast.demo.mymmorpg.entity.MonsterConfig; // 怪物配置实体（来自数据库/配置表）
-import cn.itcast.demo.mymmorpg.entity.Player; // 玩家实体
-import cn.itcast.demo.mymmorpg.support.BattlePolicy; // 战斗策略脚本（伤害、治疗计算）
-import cn.itcast.demo.mymmorpg.protocol.MessageId; // 协议消息 ID 常量
-import cn.itcast.demo.mymmorpg.protocol.ProtocolMessage; // 统一协议消息封装（消息 ID + 二进制载荷）
-import cn.itcast.demo.mymmorpg.protocol.RetCode; // 返回码常量（成功、失败原因等）
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleActionCsReq; // 客户端→服务端：战斗行动请求
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleActionScRsp; // 服务端→客户端：战斗行动响应
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEndCsReq; // 客户端→服务端：战斗结束请求
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEndScRsp; // 服务端→客户端：战斗结束响应
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEntityInfo; // 战斗实体信息（血量、攻击等）
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleStartCsReq; // 客户端→服务端：开始战斗请求
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleStartScRsp; // 服务端→客户端：开始战斗响应
-import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleSyncScNotify; // 服务端→客户端：战斗状态同步推送
-import cn.itcast.demo.mymmorpg.protocol.protobuf.EntityUpdate; // 实体属性更新片段（用于同步）
-import cn.itcast.demo.mymmorpg.protocol.protobuf.ItemReward; // 道具奖励信息
-import cn.itcast.demo.mymmorpg.repository.PlayerRepository; // 玩家数据仓库（JPA）
-import cn.itcast.demo.mymmorpg.port.BattleScenePort; // 战斗场景端口（查怪物、移除怪物）
-import cn.itcast.demo.mymmorpg.port.PlayerNotificationPort; // 玩家通知端口（推送同步消息）
-import cn.itcast.demo.mymmorpg.port.PlayerProgressPort; // 玩家进度端口（加经验等）
-import cn.itcast.demo.mymmorpg.service.ConfigQueryService; // 配置查询服务
-import com.fasterxml.jackson.databind.ObjectMapper; // JSON 序列化/反序列化工具
-import org.springframework.data.redis.core.StringRedisTemplate; // Spring Redis 字符串操作模板
-import org.springframework.stereotype.Service; // 标记为 Spring 服务 Bean
+import cn.itcast.demo.mymmorpg.anticheat.AntiCheatService;
+import cn.itcast.demo.mymmorpg.challenge.ChallengeConfigDocument;
+import cn.itcast.demo.mymmorpg.challenge.ChallengeConfigLoader;
+import cn.itcast.demo.mymmorpg.element.ElementReactionEngine;
+import cn.itcast.demo.mymmorpg.element.ElementType;
+import cn.itcast.demo.mymmorpg.element.ReactionResult;
+import cn.itcast.demo.mymmorpg.model.BattleSceneFactory;
+import cn.itcast.demo.mymmorpg.model.admin.BattleStatsSnapshot;
+import cn.itcast.demo.mymmorpg.entity.MonsterConfig;
+import cn.itcast.demo.mymmorpg.entity.Player;
+import cn.itcast.demo.mymmorpg.entity.SkillConfig;
+import cn.itcast.demo.mymmorpg.support.BattlePolicy;
+import cn.itcast.demo.mymmorpg.tlog.TLogEventPublisher;
+import cn.itcast.demo.mymmorpg.protocol.MessageId;
+import cn.itcast.demo.mymmorpg.protocol.ProtocolMessage;
+import cn.itcast.demo.mymmorpg.protocol.RetCode;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleActionCsReq;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleActionScRsp;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEndCsReq;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEndScRsp;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleEntityInfo;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleStartCsReq;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleStartScRsp;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.BattleSyncScNotify;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.EnterEncounterScNotify;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.EntityUpdate;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.ExitEncounterScNotify;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.ItemReward;
+import cn.itcast.demo.mymmorpg.protocol.protobuf.TurnInfo;
+import cn.itcast.demo.mymmorpg.repository.PlayerRepository;
+import cn.itcast.demo.mymmorpg.port.BattleScenePort;
+import cn.itcast.demo.mymmorpg.port.PlayerNotificationPort;
+import cn.itcast.demo.mymmorpg.port.PlayerProgressPort;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
 
-import java.time.Duration; // 时间间隔类型（用于 Redis 过期时间）
-import java.util.HashMap; // 哈希映射（货币奖励等）
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong; // 线程安全的自增长整型（战斗 ID 序列）
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 状态同步战斗：怪物属性来自 {@code monster_config}，运行时状态存 Redis、结算走 RocketMQ 事件。
@@ -48,6 +60,8 @@ public class BattleService { // 战斗核心业务服务类
     private static final String REDIS_STATE = "battle:state:"; // Redis 键前缀：战斗状态
     /** Redis 键前缀：玩家当前进行中的战斗 ID */
     private static final String REDIS_ACTIVE = "battle:active:"; // Redis 键前缀：活跃战斗绑定
+    /** Redis SET：活跃战斗玩家 ID 索引（替代 KEYS 扫描） */
+    private static final String REDIS_ACTIVE_INDEX = "battle:active:index";
     /** 战斗相关 Redis 键的过期时间：30 分钟 */
     private static final Duration STATE_TTL = Duration.ofMinutes(30); // 状态 TTL
     /** 客户端时间戳允许偏差窗口：5 分钟，防重放 */
@@ -65,26 +79,26 @@ public class BattleService { // 战斗核心业务服务类
     /** 行动类型：使用道具 */
     private static final int ACTION_ITEM = 3; // 使用道具
 
-    /** 配置查询服务 */
-    private final ConfigQueryService configQueryService; // 查怪物等配置
-    /** 玩家数据仓库 */
-    private final PlayerRepository playerRepository; // JPA 玩家仓库
-    /** 战斗场景端口 */
-    private final BattleScenePort battleScenePort; // 场景怪物查询
-    /** Redis 字符串模板 */
-    private final StringRedisTemplate stringRedisTemplate; // Redis 操作
-    /** JSON 对象映射器 */
-    private final ObjectMapper objectMapper; // 状态序列化
-    /** 战斗数值策略 */
-    private final BattlePolicy battlePolicy; // 伤害/治疗计算
-    /** 战斗事件发布器 */
-    private final BattleEventPublisher battleEventPublisher; // MQ 事件
-    /** 玩家通知端口 */
-    private final PlayerNotificationPort playerNotificationPort; // 推送同步
-    /** 玩家进度端口 */
-    private final PlayerProgressPort playerProgressPort; // 加经验
-    /** 战斗场景工厂 */
-    private final BattleSceneFactory battleSceneFactory; // 创建状态对象
+    /** 回合时限（秒），填充 TurnInfo */
+    private static final int TURN_TIME_LIMIT_SEC = 30;
+
+    private final ConfigQueryService configQueryService;
+    private final PlayerRepository playerRepository;
+    private final BattleScenePort battleScenePort;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
+    private final BattlePolicy battlePolicy;
+    private final BattleEventPublisher battleEventPublisher;
+    private final PlayerNotificationPort playerNotificationPort;
+    private final PlayerProgressPort playerProgressPort;
+    private final BattleSceneFactory battleSceneFactory;
+    private final BattleStatsCollector battleStatsCollector;
+    private final ChallengeConfigLoader challengeConfigLoader;
+    private final ObjectProvider<RogueService> rogueServiceProvider;
+    private final ObjectProvider<BattleEndProjectionNotifier> battleEndProjectionNotifier;
+    private final ElementReactionEngine elementReactionEngine;
+    private final ObjectProvider<TLogEventPublisher> tLogEventPublisher;
+    private final AntiCheatService antiCheatService;
 
     /** 战斗 ID 自增序列，起始值 10000 */
     private final AtomicLong battleIdSeq = new AtomicLong(10_000L); // 战斗 ID 序列
@@ -104,23 +118,23 @@ public class BattleService { // 战斗核心业务服务类
      * @return 活跃绑定数
      */
     public int countActiveBattleBindings() { // 供监控暴露：有多少玩家正处于战斗
-        var keys = stringRedisTemplate.keys(REDIS_ACTIVE + "*"); // 扫描所有 battle:active:* 键
-        return keys == null ? 0 : keys.size(); // 无键返回 0，否则返回键数量
+        Long size = stringRedisTemplate.opsForSet().size(REDIS_ACTIVE_INDEX); // O(1) SCARD，避免 KEYS
+        int active = size == null ? 0 : size.intValue();
+        battleStatsCollector.observeActiveBindings(active);
+        return active;
+    }
+
+    /** 只读统计快照（含胜率、时长、技能使用率、按怪模板聚合）。 */
+    public BattleStatsSnapshot statsSnapshot() {
+        return battleStatsCollector.snapshot(getIssuedBattleIdMax(), countActiveBattleBindings());
+    }
+
+    public cn.itcast.demo.mymmorpg.model.ai.PlayerBattleLite playerBattleStats(long playerId) {
+        return battleStatsCollector.playerStats(playerId);
     }
 
     /**
      * 构造器注入所有依赖。
-     *
-     * @param configQueryService       配置查询服务
-     * @param playerRepository         玩家仓库
-     * @param battleScenePort          战斗场景端口
-     * @param stringRedisTemplate      Redis 模板
-     * @param objectMapper             JSON 映射器
-     * @param battlePolicy             战斗策略
-     * @param battleEventPublisher     事件发布器
-     * @param playerNotificationPort   通知端口
-     * @param playerProgressPort       进度端口
-     * @param battleSceneFactory       场景工厂
      */
     public BattleService(
             ConfigQueryService configQueryService,
@@ -132,17 +146,34 @@ public class BattleService { // 战斗核心业务服务类
             BattleEventPublisher battleEventPublisher,
             PlayerNotificationPort playerNotificationPort,
             PlayerProgressPort playerProgressPort,
-            BattleSceneFactory battleSceneFactory) {
-        this.configQueryService = configQueryService; // 保存配置服务
-        this.playerRepository = playerRepository; // 保存玩家仓库
-        this.battleScenePort = battleScenePort; // 保存场景端口
-        this.stringRedisTemplate = stringRedisTemplate; // 保存 Redis 模板
-        this.objectMapper = objectMapper; // 保存 JSON 映射器
-        this.battlePolicy = battlePolicy; // 保存战斗策略
-        this.battleEventPublisher = battleEventPublisher; // 保存事件发布器
-        this.playerNotificationPort = playerNotificationPort; // 保存通知端口
-        this.playerProgressPort = playerProgressPort; // 保存进度端口
-        this.battleSceneFactory = battleSceneFactory; // 保存场景工厂
+            BattleSceneFactory battleSceneFactory,
+            BattleStatsCollector battleStatsCollector,
+            ChallengeConfigLoader challengeConfigLoader,
+            ObjectProvider<RogueService> rogueServiceProvider,
+            ObjectProvider<BattleEndProjectionNotifier> battleEndProjectionNotifier,
+            ElementReactionEngine elementReactionEngine,
+            ObjectProvider<TLogEventPublisher> tLogEventPublisher,
+            ObjectProvider<AntiCheatService> antiCheatServiceProvider) {
+        this.configQueryService = configQueryService;
+        this.playerRepository = playerRepository;
+        this.battleScenePort = battleScenePort;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.objectMapper = objectMapper;
+        this.battlePolicy = battlePolicy;
+        this.battleEventPublisher = battleEventPublisher;
+        this.playerNotificationPort = playerNotificationPort;
+        this.playerProgressPort = playerProgressPort;
+        this.battleSceneFactory = battleSceneFactory;
+        this.battleStatsCollector = battleStatsCollector;
+        this.challengeConfigLoader = challengeConfigLoader;
+        this.rogueServiceProvider = rogueServiceProvider;
+        this.battleEndProjectionNotifier = battleEndProjectionNotifier;
+        this.elementReactionEngine = elementReactionEngine == null
+                ? new ElementReactionEngine() : elementReactionEngine;
+        this.tLogEventPublisher = tLogEventPublisher;
+        AntiCheatService injected = antiCheatServiceProvider == null
+                ? null : antiCheatServiceProvider.getIfAvailable();
+        this.antiCheatService = injected == null ? new AntiCheatService() : injected;
     }
 
     /**
@@ -152,38 +183,43 @@ public class BattleService { // 战斗核心业务服务类
      * @param req      开始战斗请求
      * @return 协议响应消息
      */
-    public ProtocolMessage handleBattleStart(long playerId, BattleStartCsReq req) { // 处理开始战斗
-        if (playerId <= 0) { // 未选择角色或会话无效
-            return startRsp(RetCode.PLAYER_NOT_SELECTED, 0, null, null, 0); // 返回未选角错误码
+    public ProtocolMessage handleBattleStart(long playerId, BattleStartCsReq req) {
+        if (playerId <= 0) {
+            return startRsp(RetCode.PLAYER_NOT_SELECTED, StartPayload.empty());
         }
-        if (req.getLineupId() == 0) { // 阵容 ID 为 0 表示无效
-            return startRsp(RetCode.BATTLE_LINEUP_INVALID, 0, null, null, 0); // 返回阵容无效
+        if (req.getLineupId() == 0) {
+            return startRsp(RetCode.BATTLE_LINEUP_INVALID, StartPayload.empty());
         }
-        long enemyEntityId = Integer.toUnsignedLong(req.getEnemyId()); // 将请求中的敌人 ID 转为无符号 long
-        var refOpt = battleScenePort.findMonsterForBattle(playerId, enemyEntityId); // 查场景中怪物引用
-        if (refOpt.isEmpty()) { // 场景中没有该敌人
-            return startRsp(RetCode.BATTLE_ENEMY_NOT_FOUND, 0, null, null, 0); // 返回敌人不存在
+        long enemyEntityId = req.getSceneEntityId() > 0
+                ? req.getSceneEntityId()
+                : Integer.toUnsignedLong(req.getEnemyId());
+        var lockOpt = battleScenePort.markMonsterInCombat(playerId, enemyEntityId);
+        if (lockOpt.isEmpty()) {
+            return startRsp(RetCode.BATTLE_ENEMY_NOT_FOUND, StartPayload.empty());
         }
-        var ref = refOpt.get(); // 取出怪物场景引用（含 sceneId、模板 ID 等）
-        MonsterConfig mc = configQueryService.findMonsterById(ref.monsterTemplateId()); // 按模板 ID 查怪物配置
-        if (mc == null) { // 配置表无此怪物
-            return startRsp(RetCode.BATTLE_ENEMY_NOT_FOUND, 0, null, null, 0); // 仍按敌人不存在处理
+        var lock = lockOpt.get();
+        MonsterConfig mc = configQueryService.findMonsterById(lock.monsterTemplateId());
+        if (mc == null) {
+            battleScenePort.releaseMonsterFromCombat(playerId, enemyEntityId);
+            return startRsp(RetCode.BATTLE_ENEMY_NOT_FOUND, StartPayload.empty());
         }
-        var playerOpt = playerRepository.findById(playerId); // 从数据库加载玩家
-        if (playerOpt.isEmpty()) { // 玩家不存在
-            return startRsp(RetCode.PLAYER_NOT_FOUND, 0, null, null, 0); // 返回玩家未找到
+        var playerOpt = playerRepository.findById(playerId);
+        if (playerOpt.isEmpty()) {
+            battleScenePort.releaseMonsterFromCombat(playerId, enemyEntityId);
+            return startRsp(RetCode.PLAYER_NOT_FOUND, StartPayload.empty());
         }
-        Player player = playerOpt.get(); // 取出玩家实体
-        String activeKey = REDIS_ACTIVE + playerId; // 该玩家「进行中战斗」的 Redis 键
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(activeKey))) { // 已有进行中的战斗
-            return startRsp(RetCode.BATTLE_ALREADY_ACTIVE, 0, null, null, 0); // 不允许重复开战
+        Player player = playerOpt.get();
+        String activeKey = REDIS_ACTIVE + playerId;
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(activeKey))) {
+            battleScenePort.releaseMonsterFromCombat(playerId, enemyEntityId);
+            return startRsp(RetCode.BATTLE_ALREADY_ACTIVE, StartPayload.empty());
         }
 
-        int[] ps = playerCombatStats(player.getLevel() == null ? 1 : player.getLevel()); // 按等级计算玩家战斗四维
-        long battleId = battleIdSeq.incrementAndGet(); // 分配新的全局唯一战斗 ID
-        var state = battleSceneFactory.createState( // 工厂创建状态骨架
+        int[] ps = playerCombatStats(player.getLevel() == null ? 1 : player.getLevel());
+        long battleId = battleIdSeq.incrementAndGet();
+        var state = battleSceneFactory.createState(
                 battleId,
-                ref.sceneId(),
+                lock.sceneId(),
                 playerId,
                 Integer.toUnsignedLong(req.getLineupId()),
                 enemyEntityId,
@@ -194,32 +230,180 @@ public class BattleService { // 战斗核心业务服务类
                 mc.getExpReward() == null ? 0 : mc.getExpReward(),
                 req.getBattleType()
         );
-        state.playerHpMax = ps[0]; // 设置玩家最大 HP
-        state.playerHp = ps[0]; // 设置玩家当前 HP
-        state.playerMpMax = ps[1]; // 设置玩家最大 MP
-        state.playerMp = ps[1]; // 设置玩家当前 MP
-        state.playerAttack = ps[2]; // 设置玩家攻击力
-        state.playerDefense = ps[3]; // 设置玩家防御力
-        state.enemyHpMax = mc.getHpMax() == null ? 100 : mc.getHpMax(); // 敌人最大 HP
-        state.enemyHp = state.enemyHpMax; // 敌人当前 HP 满血
-        state.enemyMpMax = mc.getMpMax() == null ? 0 : mc.getMpMax(); // 敌人最大 MP
-        state.enemyMp = state.enemyMpMax; // 敌人当前 MP
-        state.enemyAttack = mc.getAttack() == null ? 10 : mc.getAttack(); // 敌人攻击力
-        state.enemyDefense = mc.getDefense() == null ? 5 : mc.getDefense(); // 敌人防御力
-        state.nextActionId = 1L; // 初始化行动序号
-        saveState(state); // 将完整状态写入 Redis
-        stringRedisTemplate.opsForValue().set(activeKey, String.valueOf(battleId), STATE_TTL); // 记录玩家→战斗 ID 绑定
+        state.playerHpMax = ps[0];
+        state.playerHp = ps[0];
+        state.playerMpMax = ps[1];
+        state.playerMp = ps[1];
+        state.playerAttack = ps[2];
+        state.playerDefense = ps[3];
+        state.enemyHpMax = mc.getHpMax() == null ? 100 : mc.getHpMax();
+        state.enemyHp = state.enemyHpMax;
+        state.enemyMpMax = mc.getMpMax() == null ? 0 : mc.getMpMax();
+        state.enemyMp = state.enemyMpMax;
+        state.enemyAttack = mc.getAttack() == null ? 10 : mc.getAttack();
+        state.enemyDefense = mc.getDefense() == null ? 5 : mc.getDefense();
+        state.nextActionId = 1L;
+        state.turnNumber = 1;
+        state.currentActorId = playerId;
+        state.returnPosX = lock.returnPosX();
+        state.returnPosY = lock.returnPosY();
+        state.returnPosZ = lock.returnPosZ();
+        state.unitCount = resolveLineupUnitCount(req.getLineupId(), req.getLineupUnitIdsCount());
+        saveState(state);
+        bindActiveBattle(playerId, battleId);
 
-        battleEventPublisher.publishBattleStarted(playerId, battleId, ref.sceneId(), enemyEntityId, ref.monsterTemplateId()); // 发送战斗开始 MQ 事件
+        battleEventPublisher.publishBattleStarted(
+                playerId, battleId, lock.sceneId(), enemyEntityId, lock.monsterTemplateId());
 
-        BattleEntityInfo pe = buildEntityInfo(playerId, state.playerName, state.playerLevel, // 构建协议中的玩家实体信息
+        BattleEntityInfo pe = buildEntityInfo(playerId, state.playerName, state.playerLevel,
                 state.playerHp, state.playerHpMax, state.playerMp, state.playerMpMax,
                 state.playerAttack, state.playerDefense);
-        BattleEntityInfo ee = buildEntityInfo(enemyEntityId, state.enemyName, state.enemyLevel, // 构建敌人实体信息
+        BattleEntityInfo ee = buildEntityInfo(enemyEntityId, state.enemyName, state.enemyLevel,
                 state.enemyHp, state.enemyHpMax, state.enemyMp, state.enemyMpMax,
                 state.enemyAttack, state.enemyDefense);
+        List<BattleEntityInfo> units = expandLineupUnits(playerId, state);
 
-        return startRsp(RetCode.OK, battleId, ee, pe, ref.sceneId()); // 返回成功及双方属性、场景 ID
+        notifyEnterEncounter(playerId, state);
+
+        return startRsp(RetCode.OK, new StartPayload(
+                battleId, ee, pe, lock.sceneId(), units, List.of(ee),
+                turnInfoOf(state), enemyEntityId,
+                state.returnPosX, state.returnPosY, state.returnPosZ));
+    }
+
+    /**
+     * 挑战关卡开战：不查场景怪，按 challengeId 生成合成敌人并写入 Redis 战斗状态。
+     *
+     * @return retcode + battleId（失败时 battleId=0）
+     */
+    public ChallengeBattleStart startChallengeBattle(long playerId, int lineupId, int challengeId, int battleType) {
+        if (playerId <= 0) {
+            return new ChallengeBattleStart(RetCode.PLAYER_NOT_SELECTED, 0L);
+        }
+        int resolvedLineup = lineupId > 0 ? lineupId : 1;
+        if (challengeId <= 0) {
+            return new ChallengeBattleStart(RetCode.CHALLENGE_NOT_FOUND, 0L);
+        }
+        var playerOpt = playerRepository.findById(playerId);
+        if (playerOpt.isEmpty()) {
+            return new ChallengeBattleStart(RetCode.PLAYER_NOT_FOUND, 0L);
+        }
+        Player player = playerOpt.get();
+        String activeKey = REDIS_ACTIVE + playerId;
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(activeKey))) {
+            return new ChallengeBattleStart(RetCode.BATTLE_ALREADY_ACTIVE, 0L);
+        }
+
+        ChallengeConfigDocument cfg = challengeConfigLoader.requireOrFallback(challengeId);
+        MonsterConfig mc = resolveChallengeMonster(cfg, challengeId);
+        int sceneId = 0;
+        long enemyEntityId = 900_000L + Integer.toUnsignedLong(challengeId);
+        int[] ps = playerCombatStats(player.getLevel() == null ? 1 : player.getLevel());
+        long battleId = battleIdSeq.incrementAndGet();
+        var state = battleSceneFactory.createState(
+                battleId,
+                sceneId,
+                playerId,
+                Integer.toUnsignedLong(resolvedLineup),
+                enemyEntityId,
+                mc,
+                player,
+                mc.getName(),
+                mc.getLevel() == null ? 1 : mc.getLevel(),
+                mc.getExpReward() == null ? 0 : mc.getExpReward(),
+                battleType <= 0 ? 2 : battleType
+        );
+        state.playerHpMax = ps[0];
+        state.playerHp = ps[0];
+        state.playerMpMax = ps[1];
+        state.playerMp = ps[1];
+        state.playerAttack = ps[2];
+        state.playerDefense = ps[3];
+        state.enemyHpMax = mc.getHpMax() == null ? 100 : mc.getHpMax();
+        state.enemyHp = state.enemyHpMax;
+        state.enemyMpMax = mc.getMpMax() == null ? 0 : mc.getMpMax();
+        state.enemyMp = state.enemyMpMax;
+        state.enemyAttack = mc.getAttack() == null ? 10 : mc.getAttack();
+        state.enemyDefense = mc.getDefense() == null ? 5 : mc.getDefense();
+        state.nextActionId = 1L;
+        state.turnNumber = 1;
+        state.currentActorId = playerId;
+        state.unitCount = resolveLineupUnitCount(resolvedLineup, 0);
+        state.challengeId = challengeId;
+        saveState(state);
+        bindActiveBattle(playerId, battleId);
+        battleEventPublisher.publishBattleStarted(playerId, battleId, sceneId, enemyEntityId, mc.getId());
+        return new ChallengeBattleStart(RetCode.OK, battleId);
+    }
+
+    /**
+     * 肉鸽房间开战：复用挑战开战通道（sceneId=0），并回写 battleId。
+     */
+    public ChallengeBattleStart startRogueBattle(long playerId, int lineupId, int rogueId, int roomId, int floor) {
+        int challengeLikeId = 10_000 + Math.max(1, rogueId) * 100 + Math.max(1, roomId) + floor;
+        return startChallengeBattle(playerId, lineupId > 0 ? lineupId : 1, challengeLikeId, 3);
+    }
+
+    /**
+     * 挑战结算时强制清理战斗（不校验 HP/奖励），避免占位战斗残留。
+     */
+    public void forceEndChallengeBattle(long playerId, long battleId) {
+        if (playerId <= 0 || battleId <= 0) {
+            return;
+        }
+        BattleRuntimeState state = loadState(battleId);
+        if (state != null && state.playerId == playerId) {
+            deleteState(battleId);
+        }
+        String bound = stringRedisTemplate.opsForValue().get(REDIS_ACTIVE + playerId);
+        if (bound != null && bound.equals(String.valueOf(battleId))) {
+            unbindActiveBattle(playerId);
+        }
+    }
+
+    private MonsterConfig resolveChallengeMonster(ChallengeConfigDocument cfg, int challengeId) {
+        ChallengeConfigDocument.WaveMonster wave = cfg.firstWaveOrNull();
+        if (wave != null && wave.getMonsterTemplateId() > 0) {
+            MonsterConfig base = configQueryService.findMonsterById(wave.getMonsterTemplateId());
+            if (base != null) {
+                MonsterConfig mc = new MonsterConfig();
+                mc.setId(base.getId());
+                mc.setName(cfg.getName() != null ? cfg.getName() : base.getName());
+                mc.setModelId(base.getModelId());
+                int level = (base.getLevel() == null ? 1 : base.getLevel()) + wave.getLevelBonus();
+                mc.setLevel(level);
+                int hp = base.getHpMax() == null ? 100 : base.getHpMax();
+                int atk = base.getAttack() == null ? 10 : base.getAttack();
+                mc.setHpMax((int) Math.max(1, Math.round(hp * wave.getHpMul())));
+                mc.setMpMax(base.getMpMax() == null ? 0 : base.getMpMax());
+                mc.setAttack((int) Math.max(1, Math.round(atk * wave.getAtkMul())));
+                mc.setDefense(base.getDefense() == null ? 5 : base.getDefense());
+                mc.setExpReward(base.getExpReward() == null ? 0 : base.getExpReward());
+                mc.setDescription(cfg.getDescription());
+                return mc;
+            }
+        }
+        return syntheticChallengeMonster(challengeId);
+    }
+
+    private static MonsterConfig syntheticChallengeMonster(int challengeId) {
+        MonsterConfig mc = new MonsterConfig();
+        mc.setId(800_000 + challengeId);
+        mc.setName("Challenge-" + challengeId);
+        mc.setModelId(challengeId);
+        int level = Math.max(1, 10 + (challengeId % 20));
+        mc.setLevel(level);
+        mc.setHpMax(200 + level * 40);
+        mc.setMpMax(level * 5);
+        mc.setAttack(30 + level * 4);
+        mc.setDefense(10 + level * 2);
+        mc.setExpReward(50 + level * 10);
+        mc.setDescription("challenge synthetic");
+        return mc;
+    }
+
+    /** 挑战开战结果。 */
+    public record ChallengeBattleStart(int retcode, long battleId) {
     }
 
     /**
@@ -232,6 +416,9 @@ public class BattleService { // 战斗核心业务服务类
     public ProtocolMessage handleBattleAction(long playerId, BattleActionCsReq req) { // 处理战斗行动
         if (playerId <= 0) { // 玩家 ID 无效
             return actionRsp(RetCode.PLAYER_NOT_SELECTED, req.getBattleId(), 0, 0, 0); // 未选角
+        }
+        if (antiCheatService.isBanned(playerId)) {
+            return actionRsp(RetCode.BATTLE_CHEAT_REJECTED, req.getBattleId(), 0, 0, 0);
         }
         BattleRuntimeState state = loadState(req.getBattleId()); // 从 Redis 加载战斗状态
         if (state == null) { // 战斗不存在或已过期
@@ -253,6 +440,13 @@ public class BattleService { // 战斗核心业务服务类
             return actionRsp(RetCode.BATTLE_INVALID_ACTION, req.getBattleId(), 0, 0, 0); // 非法行动类型
         }
 
+        String behaviorKind = actionType == ACTION_SKILL ? "skill" : (actionType == ACTION_ITEM ? "item" : "click");
+        AntiCheatService.CheckResult behavior = antiCheatService.checkBehaviorAnomaly(
+                playerId, behaviorKind, 1.0, now);
+        if (behavior.verdict() != AntiCheatService.Verdict.OK) {
+            return actionRsp(RetCode.BATTLE_CHEAT_REJECTED, req.getBattleId(), 0, 0, 0);
+        }
+
         long targetId = req.getTargetEntityId(); // 目标实体 ID
         int damageDealt = 0; // 本次玩家造成的伤害（累计到响应）
         int healDone = 0; // 本次治疗量
@@ -266,49 +460,79 @@ public class BattleService { // 战斗核心业务服务类
             }
         }
 
-        long actionId = state.nextActionId++; // 分配本回合行动 ID 并自增
-        if (actionType == ACTION_ITEM) { // 使用道具
-            healDone = battlePolicy.computeHeal(actionType, req.getItemId()); // 计算治疗量
-            state.playerHp = Math.min(state.playerHpMax, state.playerHp + healDone); // 加血不超过上限
-        } else { // 攻击类行动
-            damageDealt = battlePolicy.computeDamage( // 计算伤害
+        long actionId = state.nextActionId++;
+        state.currentActorId = playerId;
+        ReactionResult reactionResult = ReactionResult.noReaction(0);
+        if (actionType == ACTION_ITEM) {
+            healDone = battlePolicy.computeHeal(actionType, req.getItemId());
+            state.playerHp = Math.min(state.playerHpMax, state.playerHp + healDone);
+        } else {
+            if (actionType == ACTION_SKILL && req.getSkillId() > 0) {
+                SkillConfig skill = configQueryService.findSkillById(req.getSkillId());
+                if (skill != null) {
+                    int manaCost = skill.getManaCost() == null ? 0 : skill.getManaCost();
+                    if (state.playerMp < manaCost) {
+                        return actionRsp(RetCode.BATTLE_INVALID_ACTION, req.getBattleId(), 0, 0, 0);
+                    }
+                    state.playerMp = Math.max(0, state.playerMp - manaCost);
+                }
+            }
+            int baseDamage = battlePolicy.computeDamage(
                     state.playerAttack, state.enemyDefense, actionType, req.getSkillId());
-            state.enemyHp = Math.max(0, state.enemyHp - damageDealt); // 扣敌人血，不低于 0
+            ElementType applied = ElementType.fromCode(req.getElementType());
+            reactionResult = elementReactionEngine.resolve(
+                    state.battleId, state.enemyEntityId, applied, baseDamage,
+                    req.getClientPredictedDamage(), req.getClientPredictedReaction());
+            damageDealt = reactionResult.finalDamage();
+            AntiCheatService.CheckResult damageCheck = antiCheatService.checkDamage(
+                    playerId, Math.max(1, baseDamage), damageDealt);
+            if (damageCheck.verdict() != AntiCheatService.Verdict.OK) {
+                return actionRsp(RetCode.BATTLE_CHEAT_REJECTED, req.getBattleId(), 0, 0, 0);
+            }
+            state.enemyHp = Math.max(0, state.enemyHp - damageDealt);
+            if (actionType == ACTION_SKILL && req.getSkillId() > 0) {
+                battleStatsCollector.recordSkillCast(playerId, req.getSkillId());
+            }
         }
 
-        if (state.enemyHp > 0) { // 敌人仍存活则怪物反击
-            int monsterDamage = battlePolicy.computeDamage(state.enemyAttack, state.playerDefense, ACTION_NORMAL, 0); // 怪物普攻
-            state.playerHp = Math.max(0, state.playerHp - monsterDamage); // 扣玩家血
+        if (state.enemyHp > 0) {
+            state.currentActorId = state.enemyEntityId;
+            int monsterDamage = battlePolicy.computeDamage(state.enemyAttack, state.playerDefense, ACTION_NORMAL, 0);
+            state.playerHp = Math.max(0, state.playerHp - monsterDamage);
         }
 
-        if (state.enemyHp <= 0) { // 敌人死亡
-            state.ended = true; // 标记战斗结束
-        } else if (state.playerHp <= 0) { // 玩家死亡
-            state.ended = true; // 标记战斗结束
+        if (state.enemyHp <= 0) {
+            state.ended = true;
+        } else if (state.playerHp <= 0) {
+            state.ended = true;
+        } else {
+            state.turnNumber = Math.max(1, state.turnNumber) + 1;
+            state.currentActorId = playerId;
         }
 
-        saveState(state); // 回写 Redis
-        refreshActiveTtl(playerId, state.battleId); // 刷新玩家活跃战斗键的 TTL
+        saveState(state);
+        refreshActiveTtl(playerId, state.battleId);
 
-        var syncBuilder = BattleSyncScNotify.newBuilder() // 构建状态同步推送
-                .setBattleId(state.battleId) // 设置战斗 ID
-                .setSyncType(SYNC_ATTR) // 默认同步类型为属性
+        var syncBuilder = BattleSyncScNotify.newBuilder()
+                .setBattleId(state.battleId)
+                .setSyncType(SYNC_ATTR)
+                .setTurnInfo(turnInfoOf(state))
                 .addEntityUpdates(
                         EntityUpdate.newBuilder()
                         .setEntityId(playerId)
                         .setHp(state.playerHp)
-                        .setMp(state.playerMp)) // 玩家血蓝
+                        .setMp(state.playerMp))
                 .addEntityUpdates(
                         EntityUpdate.newBuilder()
                         .setEntityId(state.enemyEntityId)
                         .setHp(state.enemyHp)
-                        .setMp(state.enemyMp)); // 敌人血蓝
-        if (state.ended) { // 若本回合导致结束
-            syncBuilder.setSyncType(SYNC_BATTLE_END); // 同步类型改为战斗结束
+                        .setMp(state.enemyMp));
+        if (state.ended) {
+            syncBuilder.setSyncType(SYNC_BATTLE_END);
         }
-        playerNotificationPort.send(playerId, MessageId.BATTLE_SYNC_SC_NOTIFY, syncBuilder.build().toByteArray()); // 推送同步通知
+        playerNotificationPort.send(playerId, MessageId.BATTLE_SYNC_SC_NOTIFY, syncBuilder.build().toByteArray());
 
-        return actionRsp(RetCode.OK, state.battleId, actionId, damageDealt, healDone); // 返回行动结果给请求方
+        return actionRsp(RetCode.OK, state.battleId, actionId, damageDealt, healDone, reactionResult);
     }
 
     /**
@@ -339,28 +563,54 @@ public class BattleService { // 战斗核心业务服务类
         var currency = new HashMap<Integer, Integer>(); // 货币奖励
         List<ItemReward> items = List.of(); // 道具奖励
 
-        if (clientResult == 1) { // 胜利
-            exp = state.expReward; // 取配置经验
-            currency.put(1, 500); // 固定货币奖励
+        if (clientResult == 1) {
+            exp = state.expReward;
+            currency.put(1, 500);
             items = List.of(
                     ItemReward.newBuilder()
                     .setItemId(1001)
                     .setCount(1)
-                    .build()); // 固定道具奖励
-            battleScenePort.removeMonsterFromScene(playerId, state.enemyEntityId); // 从场景移除怪物
-            final int expReward = exp; // lambda 需要 effectively final
-            if (expReward > 0) { // 有经验才写库
-                playerRepository.findById(playerId).ifPresent(p -> playerProgressPort.addExp(p, expReward)); // 加经验
+                    .build());
+            if (state.sceneId > 0) {
+                battleScenePort.removeMonsterFromScene(playerId, state.enemyEntityId);
             }
+            final int expReward = exp;
+            if (expReward > 0) {
+                playerRepository.findById(playerId).ifPresent(p -> playerProgressPort.addExp(p, expReward));
+            }
+        } else if (state.sceneId > 0) {
+            // 失败/平局：释放遭遇锁定，怪物回世界可见
+            battleScenePort.releaseMonsterFromCombat(playerId, state.enemyEntityId);
         }
 
-        battleEventPublisher.publishBattleEnded(playerId, state.battleId, clientResult, exp, req.getDuration()); // MQ：战斗结束
-        deleteState(state.battleId); // 删除 Redis 中的战斗状态
-        stringRedisTemplate.delete(REDIS_ACTIVE + playerId); // 删除玩家进行中战斗绑定
-        var currencyMap = new HashMap<Integer, Integer>(); // 复制一份用于响应（避免外部修改）
-        currencyMap.putAll(currency); // 拷贝货币 map
+        battleEventPublisher.publishBattleEnded(playerId, state.battleId, clientResult, exp, req.getDuration());
+        BattleEndProjectionNotifier projection = battleEndProjectionNotifier.getIfAvailable();
+        if (projection != null) {
+            projection.notifyBattleEnded(playerId, state.battleId, clientResult);
+        }
+        battleStatsCollector.recordEnded(
+                playerId, state.battleId, clientResult, req.getDuration(),
+                state.monsterTemplateId, state.playerLevel, exp);
+        TLogEventPublisher tlog = tLogEventPublisher == null ? null : tLogEventPublisher.getIfAvailable();
+        if (tlog != null) {
+            tlog.emit("battle_end", playerId, java.util.Map.of(
+                    "battleId", state.battleId,
+                    "result", clientResult,
+                    "exp", exp,
+                    "duration", req.getDuration()));
+        }
+        notifyExitEncounter(playerId, state, clientResult);
+        elementReactionEngine.clearBattle(state.battleId);
+        deleteState(state.battleId);
+        unbindActiveBattle(playerId);
+        RogueService rogueService = rogueServiceProvider.getIfAvailable();
+        if (rogueService != null) {
+            rogueService.onBattleSettled(playerId, state.battleId, clientResult);
+        }
+        var currencyMap = new HashMap<Integer, Integer>();
+        currencyMap.putAll(currency);
 
-        return endRsp(RetCode.OK, state.battleId, exp, currencyMap, items); // 返回结算奖励
+        return endRsp(RetCode.OK, state.battleId, exp, currencyMap, items);
     }
 
     /**
@@ -386,7 +636,17 @@ public class BattleService { // 战斗核心业务服务类
      * @param battleId 战斗 ID
      */
     private void refreshActiveTtl(long playerId, long battleId) { // 刷新活跃键 TTL
-        stringRedisTemplate.opsForValue().set(REDIS_ACTIVE + playerId, String.valueOf(battleId), STATE_TTL); // 重写并续期
+        bindActiveBattle(playerId, battleId); // 重写并续期，同时确保索引存在
+    }
+
+    private void bindActiveBattle(long playerId, long battleId) {
+        stringRedisTemplate.opsForValue().set(REDIS_ACTIVE + playerId, String.valueOf(battleId), STATE_TTL);
+        stringRedisTemplate.opsForSet().add(REDIS_ACTIVE_INDEX, String.valueOf(playerId));
+    }
+
+    private void unbindActiveBattle(long playerId) {
+        stringRedisTemplate.delete(REDIS_ACTIVE + playerId);
+        stringRedisTemplate.opsForSet().remove(REDIS_ACTIVE_INDEX, String.valueOf(playerId));
     }
 
     /**
@@ -467,23 +727,115 @@ public class BattleService { // 战斗核心业务服务类
         };
     }
 
-    /**
-     * 组装开始战斗结果：成功时带 battleId、双方属性与 sceneId。
-     *
-     * @return 协议消息
-     */
-    private static ProtocolMessage startRsp( // 开始战斗响应
-            int code, long battleId, BattleEntityInfo enemy, BattleEntityInfo player, int sceneId) {
-        var b = BattleStartScRsp.newBuilder().
-                setRetcode(code).
-                setServerTime(System.currentTimeMillis() / 1000); // 客户端可对时
-        if (code == RetCode.OK) { // 仅成功时填充战斗数据
-            b.setBattleId(battleId)
-             .setSceneId(sceneId)
-             .setEnemyInfo(enemy)
-             .setPlayerInfo(player); // 填充战斗信息
+    private record StartPayload(
+            long battleId,
+            BattleEntityInfo enemy,
+            BattleEntityInfo player,
+            int sceneId,
+            List<BattleEntityInfo> playerUnits,
+            List<BattleEntityInfo> enemyUnits,
+            TurnInfo turnInfo,
+            long sceneEntityId,
+            float returnPosX,
+            float returnPosY,
+            float returnPosZ) {
+        static StartPayload empty() {
+            return new StartPayload(0, null, null, 0, List.of(), List.of(), null, 0, 0, 0, 0);
         }
-        return new ProtocolMessage(MessageId.BATTLE_START_SC_RSP, b.build().toByteArray()); // 供客户端进入战斗 UI
+    }
+
+    private static ProtocolMessage startRsp(int code, StartPayload payload) {
+        var b = BattleStartScRsp.newBuilder()
+                .setRetcode(code)
+                .setServerTime(System.currentTimeMillis() / 1000);
+        if (code == RetCode.OK && payload != null) {
+            b.setBattleId(payload.battleId())
+                    .setSceneId(payload.sceneId())
+                    .setEnemyInfo(payload.enemy())
+                    .setPlayerInfo(payload.player())
+                    .setSceneEntityId(payload.sceneEntityId())
+                    .setReturnPosX(payload.returnPosX())
+                    .setReturnPosY(payload.returnPosY())
+                    .setReturnPosZ(payload.returnPosZ());
+            if (payload.playerUnits() != null) {
+                b.addAllPlayerUnits(payload.playerUnits());
+            }
+            if (payload.enemyUnits() != null) {
+                b.addAllEnemyUnits(payload.enemyUnits());
+            }
+            if (payload.turnInfo() != null) {
+                b.setTurnInfo(payload.turnInfo());
+            }
+        }
+        return new ProtocolMessage(MessageId.BATTLE_START_SC_RSP, b.build().toByteArray());
+    }
+
+    private static TurnInfo turnInfoOf(BattleRuntimeState state) {
+        return TurnInfo.newBuilder()
+                .setCurrentActorId(state.ended ? 0L : state.currentActorId)
+                .setTurnNumber(Math.max(1, state.turnNumber))
+                .setTimeLimit(TURN_TIME_LIMIT_SEC)
+                .build();
+    }
+
+    private static int resolveLineupUnitCount(long lineupId, int explicitUnitCount) {
+        if (explicitUnitCount > 0) {
+            return Math.min(4, explicitUnitCount);
+        }
+        int fromLineup = (int) Math.max(1, Math.min(4, lineupId));
+        return fromLineup;
+    }
+
+    private List<BattleEntityInfo> expandLineupUnits(long playerId, BattleRuntimeState state) {
+        List<BattleEntityInfo> units = new ArrayList<>();
+        units.add(buildEntityInfo(playerId, state.playerName, state.playerLevel,
+                state.playerHp, state.playerHpMax, state.playerMp, state.playerMpMax,
+                state.playerAttack, state.playerDefense));
+        for (int i = 1; i < state.unitCount; i++) {
+            long unitId = playerId * 10 + i;
+            float scale = 1f - i * 0.08f;
+            units.add(buildEntityInfo(
+                    unitId,
+                    state.playerName + "-U" + (i + 1),
+                    Math.max(1, state.playerLevel - i),
+                    Math.max(1, (int) (state.playerHpMax * scale)),
+                    Math.max(1, (int) (state.playerHpMax * scale)),
+                    Math.max(0, (int) (state.playerMpMax * scale)),
+                    Math.max(0, (int) (state.playerMpMax * scale)),
+                    Math.max(1, (int) (state.playerAttack * scale)),
+                    Math.max(1, (int) (state.playerDefense * scale))));
+        }
+        return units;
+    }
+
+    private void notifyEnterEncounter(long playerId, BattleRuntimeState state) {
+        if (state.sceneId <= 0) {
+            return;
+        }
+        EnterEncounterScNotify notify = EnterEncounterScNotify.newBuilder()
+                .setBattleId(state.battleId)
+                .setSceneId(state.sceneId)
+                .setSceneEntityId(state.enemyEntityId)
+                .setReturnPosX(state.returnPosX)
+                .setReturnPosY(state.returnPosY)
+                .setReturnPosZ(state.returnPosZ)
+                .build();
+        playerNotificationPort.send(playerId, MessageId.ENTER_ENCOUNTER_SC_NOTIFY, notify.toByteArray());
+    }
+
+    private void notifyExitEncounter(long playerId, BattleRuntimeState state, int result) {
+        if (state.sceneId <= 0) {
+            return;
+        }
+        ExitEncounterScNotify notify = ExitEncounterScNotify.newBuilder()
+                .setBattleId(state.battleId)
+                .setSceneId(state.sceneId)
+                .setResult(result)
+                .setReturnPosX(state.returnPosX)
+                .setReturnPosY(state.returnPosY)
+                .setReturnPosZ(state.returnPosZ)
+                .build();
+        playerNotificationPort.send(playerId, MessageId.EXIT_ENCOUNTER_SC_NOTIFY, notify.toByteArray());
     }
 
     /**
@@ -491,7 +843,13 @@ public class BattleService { // 战斗核心业务服务类
      *
      * @return 协议消息
      */
-    private static ProtocolMessage actionRsp(int code, long battleId, long actionId, int damage, int heal) { // 行动响应
+    private static ProtocolMessage actionRsp(int code, long battleId, long actionId, int damage, int heal) {
+        return actionRsp(code, battleId, actionId, damage, heal, ReactionResult.noReaction(damage));
+    }
+
+    private static ProtocolMessage actionRsp(int code, long battleId, long actionId, int damage, int heal,
+                                             ReactionResult reaction) { // 行动响应（含元素反应与回滚标记）
+        ReactionResult r = reaction == null ? ReactionResult.noReaction(damage) : reaction;
         var b = BattleActionScRsp.newBuilder()
                 .setRetcode(code)
                 .setBattleId(battleId)
@@ -502,6 +860,10 @@ public class BattleService { // 战斗核心业务服务类
         if (heal > 0) { // 有治疗才设置
             b.setHeal(heal); // 设置治疗
         }
+        b.setReactionType(r.reaction().getCode())
+                .setAuraElement(r.remainingAura().getCode())
+                .setRollback(r.rollback())
+                .setFinalDamage(Math.max(0, r.finalDamage() > 0 ? r.finalDamage() : damage));
         return new ProtocolMessage(MessageId.BATTLE_ACTION_SC_RSP, b.build().toByteArray()); // 供客户端播放伤害/治疗表现
     }
 
@@ -583,8 +945,20 @@ public class BattleService { // 战斗核心业务服务类
         /** 敌人防御力 */
         public int enemyDefense; // 敌人防御
         /** 下一条客户端行动序号（递增） */
-        public long nextActionId; // 行动序号
+        public long nextActionId;
         /** 是否已在服务端判定结束（尚未调用 end 结算） */
-        public boolean ended; // 结束标志
+        public boolean ended;
+        /** 回合编号（TurnInfo.turn_number） */
+        public int turnNumber;
+        /** 当前行动方 entityId */
+        public long currentActorId;
+        /** 编队展开单位数 1–4 */
+        public int unitCount = 1;
+        /** 回世界坐标 */
+        public float returnPosX;
+        public float returnPosY;
+        public float returnPosZ;
+        /** 挑战关卡 ID（非挑战为 0） */
+        public int challengeId;
     }
 }

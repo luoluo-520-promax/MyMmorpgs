@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package mmorpg.shop;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "ShopProtocolProto";
+
+message ShopRewardItem {
+  uint32 item_id = 1;
+  uint32 count = 2;
+  uint32 bind_type = 3;
+}
+
+message ShopProductInfo {
+  uint32 product_id = 1;
+  string product_type = 2;
+  string name = 3;
+  string desc = 4;
+  string icon = 5;
+  string channel_sku = 6;
+  string currency = 7;
+  int64 price = 8;
+  int64 original_price = 9;
+  uint32 discount_rate = 10;
+  int64 discount_end = 11;
+  int64 sale_end = 12;
+  string tab_id = 13;
+  repeated string tags = 14;
+  repeated ShopRewardItem rewards = 15;
+  string limit_type = 16;
+  uint32 limit_count = 17;
+  uint32 remain_count = 18;
+  bool first_charge_double = 19;
+  uint32 sort = 20;
+  uint32 version = 21;
+}
+
+message GetShopShelfCsReq {
+  string tab_id = 1;
+}
+
+message GetShopShelfScRsp {
+  int32 retcode = 1;
+  string tab_id = 2;
+  repeated ShopProductInfo products = 3;
+  uint32 version = 4;
+}
+
+message CreateShopOrderCsReq {
+  uint32 product_id = 1;
+  string channel = 2;
+  string idempotency_key = 3;
+}
+
+message CreateShopOrderScRsp {
+  int32 retcode = 1;
+  string order_id = 2;
+  uint32 product_id = 3;
+  int64 pay_amount = 4;
+  string currency = 5;
+  string channel_sku = 6;
+  string channel = 7;
+  string status = 8;
+}
+
+message GetShopOrderCsReq {
+  string order_id = 1;
+}
+
+message GetShopOrderScRsp {
+  int32 retcode = 1;
+  string order_id = 2;
+  uint32 product_id = 3;
+  int64 pay_amount = 4;
+  string status = 5;
+  repeated ShopRewardItem rewards = 6;
+}
+
+message ShopOrderPaidScNotify {
+  string order_id = 1;
+  uint32 product_id = 2;
+  string status = 3;
+  repeated ShopRewardItem rewards = 4;
+  int64 pay_amount = 5;
+}
+
+message GetShopPurchaseHistoryCsReq {
+  uint32 limit = 1;
+}
+
+message ShopPurchaseRecord {
+  string order_id = 1;
+  uint32 product_id = 2;
+  string product_type = 3;
+  int64 pay_amount = 4;
+  string status = 5;
+  int64 paid_at = 6;
+}
+
+message GetShopPurchaseHistoryScRsp {
+  int32 retcode = 1;
+  repeated ShopPurchaseRecord records = 2;
+}

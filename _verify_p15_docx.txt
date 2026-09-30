@@ -1,0 +1,23 @@
+HITS {'P15': 19, '3.2.10': 2, '5.2.13': 1, '11.16': 1, 'Q15': 2, 'DynamicNarrative': 6, 'CompanionBot': 8, '2500': 8, 'CombatAnalyst': 6, 'ScreenWaypoint': 5, 'DynamicPersona': 7, '2026年08月25日': 2}
+266|Heading 3|3.2.10 生成式 AI 沉浸补齐（P15）
+275|Heading 3|3.2.10 顶尖体验短板加固（轨迹 / 探索熵 / 元素时延 / 过客共鸣 / 怜悯值 / 视觉降级 / 输入滤波）
+377|Heading 3|5.2.13 P15 生成式 AI 沉浸补齐（动态叙事 / 常驻伙伴 / 战斗分析 / 截图路点 / 动态人格）
+562|Heading 2|11.16 七大体验短板加固闭环
+603|Heading 2|Q15：P15 动态叙事/伙伴/战斗分析/截图路点/人格如何联调？
+605|Heading 2|Q15：七大体验短板（轨迹/熵值/DOT/过客/怜悯/降级/防抖）如何联调？
+KEY 5|Normal|生成日期：2026年08月25日（P15 生成式 AI 沉浸补齐；P14 体验纵深补齐；P13 体验优化；P12 性能加固）
+KEY 6|Normal|修订说明：在原有 P6–P14（含性能加固、体验优化、体验纵深补齐与 AI 平台集成）基础上，增补 P15 生成式 AI 沉浸补齐：World-Context 动态叙事（DynamicNarrativeService）、常驻 AI 伙伴 CompanionBot（MsgId 2500）、战斗连招诊断 CombatAnalyst、截图路点 ScreenWaypointTranslator、动态人格 
+KEY 33|toc 2|3.7 AI 辅助面	23
+KEY 52|Normal|5.3.1 AI 推理平台（ai-service + AiPlatformFacade · 含 P15）
+模块：ai-service（8995）+ mmorpg-common/ai/*。单体嵌入 player-service（game.ai.remote=false）；微服务 Feign AiPlatformClient + Gateway Path=/internal/ai/**。
+核心 API
+KEY 266|Heading 3|3.2.10 生成式 AI 沉浸补齐（P15）
+KEY 275|Heading 3|3.2.10 顶尖体验短板加固（轨迹 / 探索熵 / 元素时延 / 过客共鸣 / 怜悯值 / 视觉降级 / 输入滤波）
+KEY 299|Heading 2|3.7 AI 辅助面（AI 平台已集成 · 含 P15）
+AI 是「参谋」不是「裁判」，分两条物理隔离管道：管道 A（战斗 Tick）仅用规则/行为树/DDA，禁止 LLM；管道 B（交互/运营/生成式沉浸）走 ai-service 或 player-service 内嵌 AiPlatformFacade，超时/熔断后回退 rule-coach。
+玩家侧：POST /api/player/ai/a
+KEY 377|Heading 3|5.2.13 P15 生成式 AI 沉浸补齐（动态叙事 / 常驻伙伴 / 战斗分析 / 截图路点 / 动态人格）
+KEY 562|Heading 2|11.16 七大体验短板加固闭环
+KEY 603|Heading 2|Q15：P15 动态叙事/伙伴/战斗分析/截图路点/人格如何联调？
+KEY 605|Heading 2|Q15：七大体验短板（轨迹/熵值/DOT/过客/怜悯/降级/防抖）如何联调？
+KEY 621|List Bullet|生成日期：2026年08月25日（P15 生成式 AI 沉浸补齐；P14 体验纵深补齐 + 七大体验短板加固；P13 体验优化；P12 性能加固；P10/P11 原地增补）

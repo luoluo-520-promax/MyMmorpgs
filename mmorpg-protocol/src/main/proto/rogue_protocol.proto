@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package mmorpg.rogue;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "RogueProtocolProto";
+
+message StartRogueCsReq {
+  uint32 rogue_id = 1;
+  uint32 difficulty = 2;
+}
+
+message StartRogueScRsp {
+  int32 retcode = 1;
+  uint32 rogue_id = 2;
+  uint32 floor = 3;
+  uint32 room_id = 4;
+  uint32 currency = 5;
+}
+
+message GetRogueInfoCsReq {}
+
+message GetRogueInfoScRsp {
+  int32 retcode = 1;
+  bool active = 2;
+  uint32 rogue_id = 3;
+  uint32 floor = 4;
+  uint32 wave = 5;
+  uint32 room_id = 6;
+  uint32 currency = 7;
+  repeated uint32 blessings = 8;
+  uint64 battle_id = 9;
+  uint32 talent_points = 10;
+}
+
+message RogueMoveCsReq {
+  uint32 target_room_id = 1;
+  uint32 lineup_id = 2;
+}
+
+message RogueMoveScRsp {
+  int32 retcode = 1;
+  uint32 room_id = 2;
+  uint32 floor = 3;
+  uint32 wave = 4;
+  uint32 currency = 5;
+  uint64 battle_id = 6;
+}
+
+message RogueEncounterScNotify {
+  uint64 battle_id = 1;
+  uint32 rogue_id = 2;
+  uint32 room_id = 3;
+  uint32 floor = 4;
+  uint32 wave = 5;
+}
+
+message RogueSelectBlessingCsReq {
+  uint32 blessing_id = 1;
+}
+
+message RogueSelectBlessingScRsp {
+  int32 retcode = 1;
+  repeated uint32 blessings = 2;
+}
+
+message RogueQuitCsReq {}
+
+message RogueQuitScRsp {
+  int32 retcode = 1;
+}
+
+message RogueAllocateTalentCsReq {
+  uint32 talent_id = 1;
+  uint32 points = 2;
+}
+
+message RogueAllocateTalentScRsp {
+  int32 retcode = 1;
+  uint32 talent_id = 2;
+  uint32 talent_level = 3;
+  uint32 talent_points = 4;
+}

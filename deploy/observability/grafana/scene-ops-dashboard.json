@@ -1,0 +1,63 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Scene AOI heat / line soft-hard cap / boss leader / ticket prep",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "title": "AOI Grid Max Heat (via /internal/scene/debug/grid)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "scene_aoi_max_heat",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Scene Line Soft/Hard Cap Hits",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "scene_line_soft_cap_hits", "refId": "A", "legendFormat": "soft" },
+        { "expr": "scene_line_hard_cap_hits", "refId": "B", "legendFormat": "hard" }
+      ]
+    },
+    {
+      "title": "Cross-Dungeon Prep Ready Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "scene_prep_ready_latency_ms", "refId": "A", "legendFormat": "ready_ms" }
+      ]
+    },
+    {
+      "title": "Boss Leader Holds",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "scene_boss_leader_active", "refId": "A" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["scene", "aoi", "mmorpg"],
+  "timezone": "browser",
+  "title": "MyMmorpg Scene Ops",
+  "uid": "mymmorpg-scene-ops",
+  "version": 1
+}

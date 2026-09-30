@@ -6,6 +6,7 @@ package cn.itcast.demo.mymmorpg.service;
 
 import cn.itcast.demo.mymmorpg.entity.Player;
 import cn.itcast.demo.mymmorpg.event.PlayerLevelUpEvent;
+import cn.itcast.demo.mymmorpg.support.RankingScoreStore;
 import jforgame.commons.eventbus.EventBus;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -33,6 +34,8 @@ public class PlayerProgressServiceTest {
     private PlayerEntityCacheService playerEntityCacheService;
     @Mock
     private EventBus eventBus;
+    @Mock
+    private RankingScoreStore rankingScoreStore;
 
     private AutoCloseable mocks;
     private PlayerProgressService progressService;
@@ -40,7 +43,7 @@ public class PlayerProgressServiceTest {
     @BeforeMethod
     public void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        progressService = new PlayerProgressService(playerEntityCacheService, eventBus);
+        progressService = new PlayerProgressService(playerEntityCacheService, eventBus, rankingScoreStore);
         log.info("[测试前置] PlayerProgressService 已初始化");
     }
 

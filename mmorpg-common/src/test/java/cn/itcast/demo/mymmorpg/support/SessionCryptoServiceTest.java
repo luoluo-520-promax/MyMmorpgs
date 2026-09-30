@@ -4,8 +4,10 @@
  */
 package cn.itcast.demo.mymmorpg.support;
 
+import cn.itcast.demo.mymmorpg.config.SessionCryptoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -14,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 public class SessionCryptoServiceTest {
 
@@ -23,7 +26,10 @@ public class SessionCryptoServiceTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        cryptoService = new SessionCryptoService();
+        @SuppressWarnings("unchecked")
+        ObjectProvider<org.springframework.data.redis.core.StringRedisTemplate> redisProvider =
+                mock(ObjectProvider.class);
+        cryptoService = new SessionCryptoService(new SessionCryptoProperties(), redisProvider);
         log.info("[测试前置] SessionCryptoService 已加载 | publicKeyLen={}",
                 cryptoService.getPublicKeyBase64().length());
     }

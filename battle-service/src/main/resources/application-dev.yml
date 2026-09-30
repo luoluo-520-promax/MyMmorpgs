@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    password: ${MYSQL_PASSWORD:123456}
+
+game:
+  internal-api:
+    enabled: false
+    secret: ${INTERNAL_API_SECRET:dev-internal-api-secret}
+
+rpc:
+  signKey: ${RPC_SIGN_KEY:dev-rpc-sign-key}

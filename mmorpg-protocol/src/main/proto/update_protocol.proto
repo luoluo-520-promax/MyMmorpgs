@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package mmorpg.update;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "UpdateProtocolProto";
+
+// ---------- 901 / 902 获取版本清单与补丁计划 ----------
+
+message GetVersionManifestCsReq {
+  string client_version = 1;
+  uint64 client_version_number = 2;
+  string language = 3;
+  // 灰度补丁白名单校验用（可选）
+  uint64 account_id = 4;
+}
+
+message ResourceFileInfo {
+  string path = 1;
+  string checksum = 2;
+  uint64 size = 3;
+  string download_url = 4;
+  string pack_type = 5;
+}
+
+message GetVersionManifestScRsp {
+  int32 retcode = 1;
+  string version_code = 2;
+  uint64 version_number = 3;
+  bool force_update = 4;
+  repeated ResourceFileInfo download_files = 5;
+  repeated string delete_files = 6;
+  string manifest_checksum = 7;
+  string patch_tool_version = 8;
+  string base_url = 9;
+  // 清单签名（HMAC-SHA256 / 服务端私钥），客户端用内置公钥或共享密钥验签
+  string manifest_signature = 10;
+  string signing_key_id = 11;
+  // 是否支持 HTTP Range 断点续传
+  bool supports_range = 12;
+}
+
+// ---------- 903 / 904 校验本地资源 ----------
+
+message FileChecksumEntry {
+  string path = 1;
+  string checksum = 2;
+}
+
+message VerifyResourceChecksumCsReq {
+  string version_code = 1;
+  repeated FileChecksumEntry local_files = 2;
+}
+
+message VerifyResourceChecksumScRsp {
+  int32 retcode = 1;
+  repeated string invalid_files = 2;
+  repeated ResourceFileInfo repair_files = 3;
+}

@@ -1,4 +1,4 @@
-﻿字段,主键,类型,名称
-,int,int,string
-HEADER,id,type,name
-,1,1,首充送好礼
+字段,主键,类型,名称,描述,玩法,规则,配置版本,商店ID,奖励方式
+,int,int,string,string,string,string,long,long,int
+HEADER,id,type,name,description,gameplay,rules,configVersion,shopId,rewardMethod
+,1,1,首充送好礼,首次充值即送限定皮肤,充值达标领奖,每档仅可领取一次,1,0,1

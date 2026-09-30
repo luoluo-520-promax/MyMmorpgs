@@ -1,0 +1,682 @@
+paragraphs=557 tables=15
+2|Normal|MyMmorpg
+3|Normal|大型多人在线角色扮演游戏（MMORPG）
+服务端项目全方位详细介绍文档
+5|Normal|生成日期：2026年08月22日（P13 体验优化；P12 性能加固同日；P10/P11 原地增补同日）
+6|Normal|修订说明：在原有 P6–P12（含性能加固 Actor 信箱/对象池/AOI 增量等）基础上，新增 P13 体验优化（探索罗盘/地图标记/世界影响、区域特色移动/攀爬歇脚/通用探索套件、生态叙事/环境叙事/探索正向反馈、战斗辅助模式、资源自动化/灵活日常/智能养成）；技术栈截至 2026-08-22。请在 Word 中全选后按 F9 更新目录。
+7|Normal|【重要】用 Microsoft Word 或兼容软件打开后：Ctrl+A 全选 → 按 F9 更新域，即可看到带页码的自动目录；页脚为「第 X 页 / 共 Y 页」。
+9|Heading 1|目录
+10|toc 1|目录	2
+11|toc 1|第一章 写给所有人的开场白	9
+12|toc 2|1.1 这份文档是写给谁的？	9
+13|toc 2|1.2 一句话讲清这个项目	9
+14|toc 2|1.3 为什么叫 MMORPG？	9
+15|toc 2|1.4 项目当前定位	10
+16|toc 1|第二章 用生活比喻理解整套系统	10
+17|toc 2|2.1 把游戏服务器想成一座城	10
+18|toc 2|2.2 为什么要能拆成多个服务？	11
+19|toc 2|2.3 客户端与服务器如何说话？	11
+20|toc 1|第三章 玩家能体验到的能力全景	12
+21|toc 2|3.1 账号、角色与在线	12
+22|toc 2|3.2 大世界与场景	12
+23|toc 3|3.2.1 大世界探索纵深循环（P5）	15
+24|toc 3|3.2.2 二游手感纵深（P6）	16
+25|toc 3|3.2.3 动作感与世界纵深（P7）	17
+26|toc 3|3.2.4 公会与深渊（P8，二游长线社交/练度校验）	18
+27|toc 2|3.3 战斗与成长	18
+28|toc 3|3.2.5 长线养成 / 立体战斗 / 探索终局（P9）	18
+29|toc 3|3.2.6 活物生态 / 动作融合 / 地貌连锁 / 纪元与终局拓展（P10）	19
+30|toc 2|3.4 社交与轻社交	22
+31|toc 2|3.5 任务、活动、签到与商城	22
+32|toc 2|3.6 匹配与客户端更新	23
+33|toc 2|3.7 AI 辅助面	23
+34|toc 1|第四章 技术全景	23
+35|toc 2|4.1 技术选型	23
+36|toc 2|4.2 仓库模块一览	24
+37|toc 2|4.3 两种部署模式	25
+38|toc 3|4.3.1 单体（默认）	25
+39|toc 3|4.3.2 微服务	26
+40|toc 2|4.4 逻辑拓扑	27
+41|toc 1|第五章 核心子系统详解	27
+42|toc 2|5.1 玩家入口与 Center 路由	27
+43|toc 2|5.2 场景、AOI 与大世界顶尖能力	27
+44|toc 3|5.2.1 P5 解谜引擎与物理层	28
+45|toc 3|5.2.2 P5 分层探索与角色生态位	28
+46|toc 3|5.2.3 P5 区域潮汐、异步社交与量产管线	29
+47|toc 3|5.2.4 P6 二游手感纵深（垂直移动 / DoT / 引导 / 养成 / Boss 贡献）	30
+48|toc 3|5.2.5 P7 动作感 / 立体移动 / 可破坏 / 协同解谜 / 编年史 / 家园 / 突破本 / 重播	31
+49|toc 3|5.2.6 P8 公会与深渊（社交留存 / 长线练度）	32
+50|toc 3|5.2.7 P9 长线养成 / 立体战斗 / 生态社交 / 韧性手感 / 探索终局	32
+51|toc 3|5.2.8 P10 活物生态 / 立体动作融合 / 地貌元素连锁 / 服务器纪元 / 野外攻城与不对称 / 制造交易 / 命中手感 / 集群 AI	33
+52|toc 2|5.3 战斗域与 AI	41
+53|toc 2|5.4 背包、体力、词条与发奖幂等	42
+54|toc 2|5.5 商城、支付、战令与对账	42
+55|toc 2|5.6 活动、签到与世界事件	43
+56|toc 2|5.7 抽卡服务	43
+57|toc 2|5.8 匹配系统	43
+58|toc 2|5.9 管理后台与热更新	43
+59|toc 2|5.10 网关、就近接入与功能号段路由	44
+60|toc 2|5.11 反作弊与客户端完整性	44
+61|toc 2|5.12 公会域（guild-service）	44
+62|toc 1|第六章 数据、消息与一致性	45
+63|toc 2|6.1 MySQL 与 Redis 分工	45
+64|toc 2|6.2 多库与迁移	45
+65|toc 2|6.3 消息队列与最终一致	45
+66|toc 2|6.4 TLog 与日志治理	45
+67|toc 1|第七章 安全、风控与生产意识	46
+68|toc 2|7.1 内部 API HMAC	46
+69|toc 2|7.2 后台安全	46
+70|toc 2|7.3 会话、TLS 与密钥	46
+71|toc 2|7.4 支付与反作弊	46
+72|toc 1|第八章 环境变量与配置矩阵（精要）	46
+73|toc 1|第九章 本地运行、测试、CI 与压测	47
+74|toc 2|9.1 最小启动	47
+75|toc 2|9.2 测试分层	47
+76|toc 2|9.3 可观测性	48
+77|toc 2|9.4 压测	48
+78|toc 2|9.5 Redis Sentinel	48
+79|toc 1|第十章 能力成熟度对照表	49
+80|toc 2|10.1 已实现（工程可用）	49
+81|toc 2|10.2 演示级	50
+82|toc 2|10.3 计划中	50
+83|toc 1|第十一章 典型业务故事	51
+84|toc 2|11.1 登录并走进大世界	51
+85|toc 2|11.2 打完挑战，活动进度 +1	51
+86|toc 2|11.3 充值礼包到账	51
+87|toc 2|11.4 策划上线新活动	51
+88|toc 2|11.5 十连抽卡	52
+89|toc 2|11.6 大世界探索纵深旅程（P5）	52
+90|toc 2|11.7 二游手感纵深旅程（P6）	53
+91|toc 2|11.8 动作感与世界纵深旅程（P7）	53
+92|toc 2|11.9 创建公会并打远征（P8）	54
+93|toc 2|11.10 深渊连打满星领奖（P8）	55
+94|toc 1|第十二章 团队角色如何协作	55
+95|toc 2|11.11 命座解锁到区域觉醒（P9）	55
+96|toc 2|11.12 生态亲密度到攻城与交易所（P10）	56
+97|toc 1|第十三章 故障排查入门	57
+98|toc 1|第十四章 协议号段与内部 API 速览	59
+99|toc 1|第十五章 常见问题 FAQ	60
+100|toc 2|Q1：没有编程基础能看懂吗？	60
+101|toc 2|Q2：这是已上线的商业游戏吗？	60
+102|toc 2|Q3：单体还是微服务？	60
+103|toc 2|Q4：没有客户端怎么办？	61
+104|toc 2|Q5：目录和页码不显示？	61
+105|toc 2|Q6：数据会丢吗？	61
+106|toc 2|Q7：如何导入活动配置？	61
+107|toc 2|Q8：如何配置深渊/公会？	62
+108|toc 1|第十六章 名词小词典	62
+109|toc 2|Q9：P9 命座/圣遗物/下落攻击如何联调？	62
+110|toc 2|Q10：P10 生态/钩锁载具/纪元攻城/交易所如何联调？	62
+111|toc 1|第十七章 仓库文档地图	65
+112|toc 1|第十八章 总结	66
+113|toc 1|附录 A 服务端口速查	66
+114|toc 1|附录 B 微服务远程开关速查	67
+115|toc 1|附录 C 文档信息	67
+117|Normal|说明：目录由 Word 根据标题自动生成并带页码；若仍显示提示文字，请执行「更新域」。
+119|Heading 1|第一章 写给所有人的开场白
+120|Heading 2|1.1 这份文档是写给谁的？
+121|Normal|这份文档面向所有需要理解 MyMmorpg 的人：没有写过代码的产品/策划/运营、刚接触游戏服务端的学生、要评估工程完整度的管理者，以及需要快速建立整图的开发与测试同事。我们尽量用生活化比喻解释专业概念；遇到英文术语会同步给中文含义；文末有名词小词典。
+122|Normal|你不必一口气读完。建议：普通人读第 1～3 章与「业务故事」章；开发读架构与子系统；运维读部署、安全与排障；策划读玩法与配置导入；测试读质量保障与成熟度对照。
+123|Heading 2|1.2 一句话讲清这个项目
+124|Normal|MyMmorpg 是一套用 Java 编写的网络游戏服务器工程。它在玩家客户端背后处理登录、走路、打架、聊天、背包、任务、活动、抽卡、充值等一切需要「裁判」和「记账」的事情。客户端像前台门面与遥控器；服务器才是真正的裁判 + 账本 + 仓库——谁赢了、道具有没有发出去、钱有没有到账，都由服务器说了算。
+125|Heading 2|1.3 为什么叫 MMORPG？
+126|Normal|MMORPG 是 Massively Multiplayer Online Role-Playing Game 的缩写，中文常称「大型多人在线角色扮演游戏」。特征是：很多人同时在线、各自扮演角色、在同一（或分线的）世界中探索、社交、战斗与成长。本项目对标的是这类游戏的服务端能力底座，而不是只做单机或小房间对战。
+127|Heading 2|1.4 项目当前定位
+128|List Bullet|可运行、可测试、可部署的服务端示例 / 教学与工程实践项目。
+129|List Bullet|支持「单体模式」（一个进程打包大部分能力，适合本地）与「微服务模式」（按域拆分，适合扩展）。
+130|List Bullet|大量能力已按生产思路落地（安全校验、幂等发奖、热更新、观测指标、对账等）；部分数值与结算仍为演示级。
+131|List Bullet|文档如实区分「已实现 / 演示 / 计划中」，避免把愿景当成已完成功能。
+132|List Bullet|对齐二游常见体验：元素反应、体力、装备随机词条与定向锁定、命座改机制、战令/月卡、签到、联机房间、智能 NPC 与 Boss 行为树、公会（组织/科技/远征）、深渊（半月重置高难连打）、下落重击/水下领域、稀有精英偶遇、家园偷菜博弈、韧性处决、区域全收集觉醒等、野生亲密度养成、钩锁拉拽/载具战斗、地貌感电与冰封、全服纪元抉择、野外协同攻城、躲猫猫/竞速、制造与摆摊交易、HitStop 命中反馈、小队协同 AI，以及队伍元素共鸣、角色传说任务状态机、生活图鉴收藏、战斗即时指挥标记、弹射蘑菇冷却、肉鸽命运卡与大世界探索闭环等。
+133|Heading 1|第二章 用生活比喻理解整套系统
+134|Heading 2|2.1 把游戏服务器想成一座城
+135|List Bullet|城门口（网关 / 玩家服务入口）：检查身份，把你领到该去的地方。
+136|List Bullet|户籍处（玩家与账号）：等级、经验、封禁、会话。
+137|List Bullet|街道与广场（场景服务）：走路、附近能看见谁、换地图怎么交接。
+138|List Bullet|竞技场（战斗服务）：算伤害、判胜负；Boss 用行为树而不是临场编故事。
+139|List Bullet|仓库（背包服务）：道具进出记账，防复制；还有体力（Resin）与装备词条。
+140|List Bullet|邮局与会客厅（大厅）：邮件、好友、队伍、助战、家园。
+141|List Bullet|公会总部（公会服务 guild-service:8998）：持久化玩家组织（最多 40 人）、科技树全局加成、每周远征 Boss、与聊天公会频道 roster 打通。
+142|List Bullet|任务公告栏（任务服务）：接交任务、记进度。
+143|List Bullet|活动中心（活动服务）：节日活动、世界 BOSS、签到、充值进度。
+144|List Bullet|商城收银台（商店）：下单、验签、对账、战令/月卡。
+145|List Bullet|扭蛋机房（抽卡服务）：保底、十连、概率公示与审计。
+146|List Bullet|市政厅（管理后台）：配置导入、投诉、热更、AI 草稿。
+147|List Bullet|广播站（聊天）：频道消息与举报。
+148|List Bullet|技能学院（技能）：技能配置与释放相关能力。
+149|List Bullet|匹配大厅（匹配）：找队友/对手，含跨服副本匹配。
+150|List Bullet|版本办公室（更新）：资源补丁、差分、CDN 预热。
+151|Heading 2|2.2 为什么要能拆成多个服务？
+152|Normal|早期可以「一个人干所有事」（单体），开发快。当同时在线变多、战斗特别吃 CPU 时，就把竞技场单独扩建成更大场馆（微服务），其它部门不受影响。本项目刻意保留两种模式。
+153|Heading 2|2.3 客户端与服务器如何说话？
+154|Normal|走路、放技能非常频繁，不适合每次都像打开网页那样慢请求。因此主要用「长连接」：连上后保持通道，用紧凑的二进制协议（Protobuf）收发消息。后台管理、健康检查、服务互调仍用 HTTP。可以理解为：玩家走专线电话，运维走公文系统。
+155|Normal|网络通道支持 Netty TCP，以及可选的 UDP/KCP；KCP 写缓冲有水位控制，不可写时丢弃推送，避免背压把进程拖垮。
+156|Heading 1|第三章 玩家能体验到的能力全景
+157|Normal|按「玩家视角」罗列。普通人当功能清单；技术人员可对照模块与接口。
+158|Heading 2|3.1 账号、角色与在线
+159|List Bullet|登录鉴权与会话；重复登录踢下线（KickPlayer），避免一人分身乱数据。
+160|List Bullet|在线态可读（如 Redis player:online:{id}），好友系统可展示谁在线。
+161|List Bullet|跨服好友可用 Redis SET（cross:friend:{id}）。
+162|List Bullet|全局唯一 ID（Snowflake / GlobalUID），便于合服与跨服。
+163|Heading 2|3.2 大世界与场景
+164|List Bullet|场景分线：人太多自动开线，像地铁加开车厢。
+165|List Bullet|AOI（兴趣区域）：只同步附近对象，省流量。
+166|List Bullet|动态域网格（WorldZoneManager + ZoneLoadBalancer）：按密度拆合 Zone。
+167|List Bullet|场景实例池、无缝交接票据（带速度/朝向/zone）。
+168|List Bullet|WorldState：时间天气、机关 Bitmap、房主世界隔离。
+169|List Bullet|世界等级动态数值；Boss 全局刷新锁；采集物权（全服共享 / 每人独立 / 队伍共享等）。
+170|List Bullet|Portal 预加载与资源预加载清单；断线重连约 30 秒保护（无敌/隐身）。
+171|List Bullet|移动延迟补偿（SnapshotBuffer）与客户端预测校验（MOVE/DASH/技能位移差异化阈值）。
+172|List Bullet|【P5 产品纵深】ECA 解谜规则（RuleTriggerService）、物理状态层（PhysicsLayerService）、10+ 解谜模板（PuzzleTemplateService）、收集物分级与神瞳（CollectibleService）、区域探索度/声望（RegionProgressService）、奇观入口条件与 LOD 引导、角色绑定世界技（WorldSkillService）、野外烹饪（WorldCookingService）、区域潮汐/混沌/事件链（RegionImpactService）、公共地图标记与幻影残影、区域频道精英击杀广播、程序化洒点与 grid_cell 配置热更。
+173|List Bullet|【P6 二游手感纵深】移动状态机 SceneMoveCmd/MovementType（WALK/SWIM/CLIMB/GLIDE/SWING）+ MovementAdmissionService 物理准入与 StaminaConsumeService 阶梯体力；PersistentEffectZone/ZoneLifecycleManager 持续伤害区（火烧草地 DoT）；GuidanceChainService 仙灵引导链；CollectibleService.DynamicLootTier 动态宝箱品质；RegionImpactService CurseLayer + CleanseAnchor（CHAOS 硬约束）；ElementReactionEngine GaugeUnit/精通倍率与残留；EquipEnhanceService 装备强化；WorldEventService 贡献百分位分档 + RegionWorldChannelService MVP 广播。
+174|List Bullet|【P7 动作感与世界纵深】瞬时博弈 ReactionValidator（完美闪避/弹反，服务端窗口 dodgeWindowMs 校验）+ BulletTimeService 时空断裂（0.1x / 1.5s，暂停非攻击者 NPC tick）+ 闪避计入结算掉落权重；MovementType 增补 GRAPPLE/RIDE/AIR_DASH/WALL_RUN，MoveFlags 位掩码（MID_AIR_DASH/WALL_RUN），GrappleNodeService 钩锁射线粗筛 + VehicleSyncService 载具 200ms 纠偏；WorldMutabilityService 可破坏环境（HEAVY_ATTACK→MutationBroadcast，ZSET 分帧重生）；CreatureCatchService CATCH_CREATURE（SecureRandom）/驯服命名/骑乘 AOI；CoopPuzzleService 多人压力板 + RuleTrigger REQUIRE_PARTY_MEMBERS；PlayerChronicleService 编年史 BitMap + global_flag 驱动 Boss 刷新热更；HomelandService 惰性种植/浇水/随机品质 GrantPlan（可拆端口 8997）；AscensionDungeonService 世界等级突破本（独立 SceneInstance + 升级锁）；BattleReplayService 战斗指令流重播（上限 5000，2x/4x，24h 归档 OSS）。
+175|List Bullet|【P9 长线养成与探索终局】ConstellationService + SkillCastValidator（命座 ≥1 读 constellation_buff_override，改冷却/投射物/追加伤害判定；MSG 1210–1212 + AttributeRecalc）；RelicScoringService/RelicRandomizer + EquipEnhanceService.lockSubStat（POST /internal/bag/relic/lock，强化跳过锁定位）；BattleTriggerService（专武 special_effect_trigger 与命座解耦）；FallAttackValidator（ACTION_FALL_HEAVY：≥5m 且 vy<-3，落地硬直与冲击波破坏）；UnderwaterPhysicsService（BIOME_UNDERWATER，突进缩 60%，OVERLOAD→导电 DoT）；RareEliteSpawnService（15 分钟≥30 杀→GRID_INFESTATION + RARE_ELITE_APPEAR 500m）；CreatureUtilityService 跟随采集；HomelandGuardService 偷取≤20%/守卫减速；PoiseService/InputBufferService（HIT_CONFIRM/处决/预输入+100ms）；RegionAwakeningService（100%→REGION_MASTERY +72h +5% Buff，最多 3 层）；WorldCoreDungeonService（奇观全解锁→4 人世界之核 CoopRoom）。测试：OpenWorldP9FlowTest / OpenWorldP9EdgeCaseTest / OpenWorldP9BusinessFlowTest / RelicLockEnhanceTest。
+176|List Bullet|【P10 活物生态 / 动作融合 / 地貌连锁 / 纪元势力 / 野外攻城 / 制造交易 / 命中手感 / 集群 AI】EcosystemBehaviorService（FEED/PATROL/FLEE/SLEEP/MIGRATE，5s Tick，非战斗优先生态 AI）+ AffinityService（Redis 语义 creature:affinity:，喂食 FOOD_ITEM，寻宝/预警 MsgId 2200）+ EcoCarryingCapacity（过杀降刷新 + ECO_IMBALANCE 作物减产）；GrapplePhysicsService（GRAPPLE_PULL_ENEMY MsgId 2210 / 摆荡踢）+ VehicleCombatService（VehicleCastSkillReq MsgId 2220、独立韧性、EJECT_GLIDE）+ ClimbAttackService + WorldMutabilityService.DESTROY_CLIFF；TerrainMutationService（感电水池/冰封河面）+ ProjectileCurveService（SWIRL 偏转 + GAUGE_REMNANT）；ServerEpochService（epoch_version 全分线同步）+ RegionTugOfWarService（FACTION_DONATE 周结算）+ DynamicCutsceneTrigger（FORCED_CUTSCENE_START MsgId 2400）；SiegeWarService（≤20 人 PART_BREAK）+ AsymmetricPlayService/PropTransformService（HIDE_SEEK/RACING）；CraftingTreeService（异步制造 + 邮件 + CRIT_CRAFT）+ AuctionHouseService（一口价/竞拍/5% 手续费，可拆端口 8999）；HitFeedbackService（HitStop 50~150ms，MsgId 2090）+ PrePlaybackService（PRE_IMPACT/ROLLBACK <50ms）；SquadCommanderService（齐射/盾墙/队长死狂暴）+ EnvironmentUtilizationAI（独占投掷物）。测试：OpenWorldP10FlowTest / OpenWorldP10EdgeCaseTest / OpenWorldP10BusinessFlowTest。
+177|Heading 3|3.2.1 大世界探索纵深循环（P5）
+178|List Bullet|看见 → 想办法 → 解锁：远处 LOD 高亮奇观，前置谜题未解则拒绝进入（WonderEntryCondition）。
+179|List Bullet|解谜不再只是 Bitmap 开关：事件-条件-动作（ECA）可组合元素/时间/目标，触发风场、隐藏路径等。
+180|List Bullet|物理层同步：火焰蔓延、水面冻结等按 AOI 网格广播，客户端可渲染环境状态。
+181|List Bullet|收集驱动：普通/精致/珍贵宝箱 + 神瞳类收集品提升探索技能等级与体力上限。
+182|List Bullet|区域探索度面板：传送点、收集物、谜题、世界任务四维进度，达 40%/80% 解锁声望奖励。
+183|List Bullet|角色生态位：移动手段绑定特定角色/道具；厨师双倍食材、矿工额外矿物掉落；篝火即时料理 Buff。
+184|List Bullet|区域动态生态：清营变 SAFE 可召唤 Boss；无锚点维护则潮汐退回 CONTESTED；可进入 CHAOS 负面天气。
+185|List Bullet|异步社交：公共标记（求救/炫耀/BOSS 提醒）、幻影回放、区域频道 JoinBattle 独立奖励蹭怪。
+186|List Bullet|内容量产：ProceduralPlacementService 程序化洒点 + OpenWorldConfigPatchService 增量热更。
+187|Heading 3|3.2.2 二游手感纵深（P6）
+188|List Bullet|所见即所达：攀爬须校验 ClimbableMeshId 与体力；滑翔校验风场/体力阈值（IsGlidingAvailable）。
+189|List Bullet|体力按动作类型 + 持续时间阶梯扣除（攀爬/游泳/滑翔/摆荡），不再只是上限加成。
+190|List Bullet|元素改世界：火焰 apply 注册 PersistentEffectZone，每 0.5s Tick 对进入实体造成持续伤害。
+191|List Bullet|收集引导链：起点→仙灵→风圈→终点宝箱；AOI 广播 GuideParticle。
+192|List Bullet|动态掉落：宝箱 GrantPlan 按 WorldLevel 与区域探索度抬升品质权重。
+193|List Bullet|CHAOS 硬约束：停留超 30 秒叠加 CurseLayer（攻降 + DoT + 禁传送）；交互 CleanseAnchor 临时净化。
+194|Heading 3|3.2.3 动作感与世界纵深（P7）
+195|List Bullet|瞬时博弈：攻击开窗由服务端下发 dodgeWindowMs/parryWindowMs，客户端不可自报「我闪避了」；完美闪避触发 bulletTimeStart。
+196|List Bullet|立体移动：钩锁 GRAPPLE（map_grapple_nodes + 射线粗筛）、载具 RIDE（VehicleSyncCmd 关键帧 + 200ms 纠偏）。
+197|List Bullet|可破坏环境：树木/矿/桥累计重击达阈值后 AOI 广播 MutationBroadcast（约 300 米），重生分帧扫描防热 Key。
+198|List Bullet|生物驯服骑乘：CATCH_CREATURE 按残血与世界等级 SecureRandom 摇奖；骑乘属性读 creature_template，AOI 同步模型。
+199|List Bullet|多人野外解谜：压力板写入 coop_puzzle 临时集，满员同 Zone 触发 CoopPuzzleStart；离开超 5 秒清空回退。
+200|List Bullet|剧情编年史：choice_based 选择存 BitMap（chronicle:{playerId}）；全服占比达阈值则 global_flag 提升 Boss 刷新。
+201|List Bullet|家园种植烹饪：惰性计算生长；烹饪必须消耗家园产出，GrantPlan 支持随机金色料理。
+202|List Bullet|极限操作：空中冲刺固定耗体 20；壁走每秒 15，且墙面法线与速度夹角须 < 30°，返回 wallNormal 吸附。
+203|List Bullet|突破本：经验溢出 + 前置任务 → 独立 SceneInstance（如 180 秒）；胜利 upgradeWorldLevel（分布式锁）并首通广播。
+204|List Bullet|战斗重播：tick 指令写入 replay:{id}（≤5000）；Admin 可 2x/4x 回放校验伤害是否在随机种子预期内。
+205|Heading 3|3.2.4 公会与深渊（P8，二游长线社交/练度校验）
+206|List Bullet|深渊高难回廊：对标半月重置深渊；连打保状态、按剩余时间计星、里程碑邮件发奖（已实现于 battle/abyss）。
+207|List Bullet|公会中轻度社交容器：组织持久化、科技加成、远征贡献分档、与聊天频道单一 guildId 打通（已实现于 guild-service）。
+208|List Bullet|仍预留/未完全产品化：装备套装共鸣完整匹配（suit_id 字段仍在）、fishing_spot/cooking_recipe（钓鱼 QTE）、world_incident_template（奇遇池）、个人名片 player:profile——schema 或字段已定稿，部分玩法链未接完。命座机制挂载与圣遗物定向锁定已在 P9 落地（见 3.2.5 / 5.2.7）。 P10 生态/钩锁载具战斗/地貌改写/纪元拉锯/攻城非对称/制造交易所/命中反馈/集群 AI 已落地（见 3.2.6 / 5.2.8）。
+209|Heading 2|3.3 战斗与成长
+210|Heading 3|3.2.5 长线养成 / 立体战斗 / 探索终局（P9）
+211|List Bullet|探索终局：区域探索度 100% 触发 REGION_MASTERY 全服 EPIC_MVP 广播，并给予 72 小时全属性 +5% WorldBuff（最多同时 3 个区域 Buff）；奇观全解锁后开放「世界之核」4 人联机副本（区别于 P8 深渊）。
+212|List Bullet|手感深化：PoiseService 韧性条破韧处决（EXECUTION_TRIGGER）与开大超级装甲（免疫打断非无敌）；InputBufferService 在 dodgeWindow 结束后额外 100ms 保留预输入，超时 INPUT_CLEAR。
+213|List Bullet|社交痕迹博弈：家园作物 READY 后好友最多偷 20%；房主可装守卫机关，触发则偷取失败并 DEBUFF_SPEED_DOWN 30s；高难解谜失败 3 次推荐幻影引导 PHANTOM_GUIDE_MARK（规则模拟路径，不跳过谜题）。
+214|List Bullet|生态偶遇：格子 15 分钟击杀≥30 触发金光稀有精英并 AOI 红点预警；驯服生物可开启跟随采集，harvest_affinity 加成直入背包。
+215|List Bullet|立体战斗：下落重击服务端校验高度/速度并下发落地硬直；水下独立生物群系缩减突进、改写火雷爆炸反应。
+216|List Bullet|长线养成负反馈规避：命座解锁改技能机制（非纯数值）；圣遗物词条可定向锁定后再强化；专武精炼绑定 special_effect_trigger，由 BattleTriggerService 独立监听。
+217|Heading 3|3.2.6 活物生态 / 动作融合 / 地貌连锁 / 纪元与终局拓展（P10）
+218|List Bullet|活物生态：非战斗时优先执行 behavior_tree_eco（进食/巡逻/逃逸/睡眠/迁徙）；玩家靠近触发惧怕逃逸；亲密度 0～1000，达阈值解锁寻宝（HIDDEN 宝箱）与 CREATURE_ALERT 预警（早于 AOI 红点）。
+219|List Bullet|种群承载力：击杀过多某类生物则 ProceduralPlacementService 刷新目标下调，并触发区域 Debuff ECO_IMBALANCE（作物产量×0.5）。
+220|List Bullet|立体动作融合：钩锁可拉轻体敌人或被重体反拉并结算碰撞伤害；摆荡最高点派生踢技伤害×(速度/基准)；载具独立韧性条，损毁弹射滑翔继承水平速度；攀爬允许轻攻击额外扣体力 5；破坏 CLIFF 墙面广播 DESTROY_CLIFF 形成新攀爬路径。
+221|List Bullet|地貌元素连锁：水池 OVERLOAD→全池 ELECTRO_CHARGED_ZONE（10s，5 码传导）；湿度>60% 时 FREEZE→ICE_TERRAIN（30s，走速×0.7/滑行×1.3，可承重压板）；风系 SWIRL 偏转敌方弹道 60°～120° 并广播元素残留条。
+222|List Bullet|服务器唯一纪元：global_flag 达阈值推进 epoch_version，覆写主城雕像/永久天气等，全分线同步；区域拉锯周结算胜者获 FACTION_BUFF（采集+50%），败者撤退相邻区；抉择组合达标强制 2s 过场（可跳过）。
+223|List Bullet|野外协同攻城：SiegeRoom 最多 20 人；Boss 部位破坏（左腿移速-50%/右臂伤害-30%）+ 四元素法阵破无敌盾；结算含部位加分与攻城币外观。
+224|List Bullet|不对称竞技：HIDE_SEEK 道具变形 + 15s PROP_AUTH 防瞬移 + 搜寻者 SCANNER_SKILL；竞速过点时间戳入 ZSET 发限时称号。
+225|List Bullet|制造与交易：多级 recipe_tree 异步合成完成后邮件送达，支持暴击双倍/提品；交易所冻结上架、一口价与 24h 竞拍，成交扣 5% 手续费回收货币（可拆 trade-service:8999）。
+226|List Bullet|命中手感权威下发：结算附带 HitStopDuration 与 ShakeIntensity（MsgId 2090，暂停逻辑帧不影响物理）；普攻 ACTION_START 先发 PRE_IMPACT，<50ms 严格校验失败则 ROLLBACK。
+227|List Bullet|集群与环境 AI：队长可下发齐射/盾墙（格挡+60%）覆盖队员个体 BT；队长死亡队员 BERSERK（攻+30%/防-50%）；AI 独占拾取可投掷环境物造成百分比伤害与击退。
+228|Heading 3|3.2.7 队伍共鸣 / 传说状态机 / 图鉴 / 指挥标记 / 地形冷却 / 肉鸽命运卡（P11）
+229|Normal|配队收益预期：换人不再只为「挂元素」，双火/四火、双水等共鸣以套装属性形式进入战斗上下文（WorldBuff）。
+230|Normal|个人传说链：清理营地后可触发角色邀约；对话选择→护送/战斗→领奖；期间区域潮汐锁定，避免刷新打断剧情。
+231|Normal|生活图鉴长线：捕捉/钓鱼/烹饪首次发现有奖励；达全区 80% 生物收集发限定名片；过度摘花/采矿触发资源贫瘠 Debuff（产出降低，非伤害诅咒）。
+232|Normal|社交战斗指挥：20 人攻城或 4 人联机时，队长长按标记 Boss 部位并下发集火，全队看到 MARK_TARGET，被标记部位临时增伤强化协作正反馈。
+233|Normal|地形多层次反馈：弹射蘑菇/风场踩过进入冷却，客户端播枯萎动画；误触不扣体力。
+234|Normal|终局闭环：肉鸽开局携带大世界探索度与亲密度命运卡；通关回写区域潮汐净化，「打本治世界」。
+235|List Bullet|战斗开始 / 行动 / 结算；挑战关卡与肉鸽；瞬时博弈 ACTION_PERFECT_DODGE / ACTION_PARRY（MsgId 208–211）与指令流重播 Replay。
+236|List Bullet|元素反应引擎：附着(GaugeUnit 弱1/强2/超强4)→触发→反应→倍率×(1+精通转化)；蒸发/融化支持残留减半；客户端预测与 rollback 标记。
+237|List Bullet|AI 队友指挥 + Boss 行为树（狂暴/转阶段/锁仇恨）；实时战斗禁止依赖 LLM。
+238|List Bullet|抽卡：保底/十连/天井/历史；概率公示与审计摘要。
+239|List Bullet|肉鸽：结算回写；局内天赋加点；P11 开局可注入大世界探索度/亲密度命运卡，通关回写区域潮汐净化（RogueFateCardService）。
+240|List Bullet|战斗日/周统计（Redis Hash）；排行榜（等级/战力 ZSET）。
+241|Heading 3|3.2.8 探索便利 / 移动流畅 / 生态沉浸 / 战斗辅助 / 长线减负（P13）
+242|Normal|探索罗盘：区域探索度≥70% 解锁 ExplorationCompassService，探测附近未收集宝箱/神瞳/限时挑战，避免「跟着视频跑」。
+243|Normal|大地图标记：MapMarkerService 统一 COLLECTED/UNCOLLECTED/IN_PROGRESS 状态与追踪图标。
+244|Normal|探索改变世界：ExplorationWorldImpactService 按阈值解锁路径、变更 NPC 对话、触发区域事件。
+245|Normal|区域特色移动：RegionalTraverseService 滑索/气流/高速载具；ClimbRestPointService 攀爬歇脚恢复体力；UniversalTraversalService 账号级解锁核心探索套件（不绑定角色）。
+246|Normal|生态沉浸：EcoNarrativeBridgeService 生态行为×任务联动；EnvironmentalStoryService 场景道具无声叙事；WorldExplorationFeedbackService 探索行为正向改变世界。
+247|Normal|战斗辅助：CombatAssistService 经典/简化模式（自动连招、伤害预警、低血量时间缓速、增强 HitStop）。
+248|Normal|长线减负：ResourceAutomationService 自动矿机/农场；FlexibleDailyQuestService 多路径日常+一键领取；BuildRecommendationService 养成方案推荐与一键配置。
+249|List Bullet|API：GET .../compass/status、POST .../compass/probe、GET .../map/markers、GET .../explore/world-impact、POST .../traverse/regional/use、POST .../traverse/universal/grant-kit、POST .../combat/assist/mode、POST .../automation/*、POST .../daily/*、GET .../build/recommend。
+250|List Bullet|测试：OpenWorldP13FlowTest、OpenWorldP13EdgeCaseTest、OpenWorldP13BusinessFlowTest；权威 docs/open-world-top-tier.md P13。
+251|List Bullet|皮肤衣柜与穿戴（协议号段约 12xx）。
+252|List Bullet|【P8 深渊】并入 battle-service：固定 3 层×4 间=12 间连打；会话 Redis abyss:session:{playerId}（血量/能量/技能 CD 不重置）；星级 Redis abyss:stars:{playerId}；剩时≥60s→3星 / ≥30s→2星 / 通关→1星；累计 9/12/15 星经大厅系统邮件发原石与圣遗物碎片；每月 1/16 日 5:00 重置；渊月祝福 CHARGE_ATTACK+30%；配置 abyss_floor_config.json 可热更。
+253|Heading 2|3.4 社交与轻社交
+254|List Bullet|好友、邮件（附件幂等进背包）、聊天与举报。
+255|List Bullet|队伍：邀请码、踢人、队长转移。
+256|List Bullet|联机房间 CoopRoom：最多 4 人共斗（弱化全服 AOI 伤害广播）。
+257|List Bullet|事件临时小队；好友助战（冷却/报酬/统计）；家园访问与装饰同步。
+258|List Bullet|跨服 4 人副本匹配（match type=3）。
+259|List Bullet|【P8 公会】guild-service：创建消耗摩拉 30000（itemId=10001）+ 原石 300（itemId=10002）；等级 1/2/3 人数上限 20/30/40；科技 ATTACK/HP/STAMINA 各 3 级；远征 Boss HP=1e6×(1+0.2×公会等级)，伤害 ZSET guild:boss:damage:{guildId}，结算前 10%/30%/50% 发公会币 90001×200/100/50；会长 7 日未登录自动转让；聊天侧 chat:guild:{id} / roster 同步。
+260|Heading 2|3.5 任务、活动、签到与商城
+261|List Bullet|任务 JSON 驱动，支持 Admin/Internal 导入与 reload。
+262|List Bullet|活动：条件、阶段、商店货品、展示文案、导入校验；可订阅战斗结束与订单支付。
+263|List Bullet|世界 BOSS / 动态事件：排期、伤害与治疗/护盾辅助折算、按贡献百分位（前10%/30%/50%）分档结算 grantPlans，并广播 MVP。
+264|List Bullet|七日签到 / 月卡日领。
+265|List Bullet|战令 / 月卡 / 首充双倍（含自动续费、补偿领取、跨平台同步 stub）。
+266|List Bullet|商城订单双写、支付验签、账本、对账；渠道适配 Apple/Google/支付宝/微信 stub + MOCK。
+267|List Bullet|体力 Resin：自然恢复与每日购买次数。
+268|List Bullet|装备随机词条写入 affix_blob；EquipEnhanceService 支持强化升级（每 4 级副词条成长，服务端种子 + 分布式锁）。
+269|Heading 2|3.6 匹配与客户端更新
+270|List Bullet|匹配互补评分（等级/战力/等待时间）；队列分片 + 跨 shard 配对。
+271|List Bullet|热更差分、资源补丁链、CDN 预热。
+272|Heading 2|3.7 AI 辅助面
+273|Normal|AI 是「参谋」不是「裁判」。玩家顾问默认 rule-coach，LLM 关闭时回退规则；智能 NPC 可带短期记忆/情绪，超时回退规则；Admin 可生成活动/商城/任务草案与投诉分类、战斗周报。真正改数值、发道具仍走正式业务链路。
+274|Heading 1|第四章 技术全景
+275|Heading 2|4.1 技术选型
+277|Heading 2|4.2 仓库模块一览
+279|Heading 2|4.3 两种部署模式
+280|Heading 3|4.3.1 单体（默认）
+281|Normal|只启动 player-service（HTTP 8989），多数域以 Maven 依赖「嵌」在同一进程。适合本地开发、集成测试、小规模演示。
+282|List Number|docker compose up -d mysql redis
+283|List Number|复制 .env.example 为 .env
+284|List Number|mvn -pl player-service -am spring-boot:run -Dspring-boot.run.profiles=dev
+285|List Number|客户端连玩家服 HTTP / 游戏端口
+286|Heading 3|4.3.2 微服务
+287|Normal|各域独立 JAR；player 作网关 Feign 转发；域服务通过 RestTemplate 远程 Port 回调。需统一 INTERNAL_API_SECRET；独立 activity 须开远程 Port 并配置 BAG_SERVICE_URL，否则发奖 NoOp，生产 fail-fast。
+289|Heading 2|4.4 逻辑拓扑
+290|Normal|Client（TCP/KCP/WS）→ mmorpg-gateway（可选，区域/功能号段/粘滞）→ player 及各域服务；底层依赖 MySQL 多库、Redis、可选 MQ Outbox/Inbox。详细 ASCII 图见仓库 docs/troubleshooting.md。
+291|Heading 1|第五章 核心子系统详解
+292|Heading 2|5.1 玩家入口与 Center 路由
+293|Normal|多场景节点时需要「总调度」。支持 local / remote 中心模式。跨节点传送签发一次性 session_ticket；目标节点验票进入；断线可用 ResumeScene；重复登录先踢旧连接。场景节点可向 Center 注册/心跳；支持单线人数上限与空线回收。
+294|Heading 2|5.2 场景、AOI 与大世界顶尖能力
+295|Normal|AOI 用空间哈希切格子再距离精筛。WorldZoneManager 按密度管理 Zone；SceneInstancePool 管理实例。P0/P1 能力包括：WorldState、WorldLevel、BossRespawnTimer、LootOwnershipPolicy、PartyEntityOwnership、PortalPreload、ReconnectProtection、AoiBroadcastStrategy 等。业务大盘指标：GET /internal/scene/open-world/metrics/business。
+296|Normal|P4 二游产品玩法层由 OpenWorldGameplayFacade 统一门面，覆盖探索-奖励循环、功能奇观、区域世界状态、叙事偶遇、探索技能、移动手段、环境交互、惊喜彩蛋、家园/捉宠/休闲/搜打撤等。GET /internal/scene/open-world/gameplay/status 可带 playerId、regionId 返回 region_progress。
+297|Heading 3|5.2.1 P5 解谜引擎与物理层
+299|Heading 3|5.2.2 P5 分层探索与角色生态位
+301|Heading 3|5.2.3 P5 区域潮汐、异步社交与量产管线
+303|Normal|Scene 定时 tick（game.world.tick-ms）除 NPC/天气外，会调用 gameplay.tickGameplay 推进区域潮汐衰退。GM 命令 puzzle_instantiate、region_enter_chaos、config_reload_cells 已注册。完整对照与测试类见 docs/open-world-top-tier.md（P5～P7 章节）、OpenWorldP5EnhancementFlowTest、OpenWorldP5BusinessFlowTest。
+304|Heading 3|5.2.4 P6 二游手感纵深（垂直移动 / DoT / 引导 / 养成 / Boss 贡献）
+306|Normal|完整对照与测试见 docs/open-world-top-tier.md（P6 章节）、OpenWorldP6DepthFlowTest、OpenWorldP6BusinessFlowTest、ElementReactionMasteryGaugeTest、EquipEnhanceServiceTest、WorldBossRewardTierTest、P6CrossServiceBusinessFlowTest。
+307|Heading 3|5.2.5 P7 动作感 / 立体移动 / 可破坏 / 协同解谜 / 编年史 / 家园 / 突破本 / 重播
+308|Normal|权威仍在 Scene + Battle：客户端表现必须经服务端窗口、射线、位掩码与体力校验。门面仍为 OpenWorldGameplayFacade；协议 SceneMoveCmd 增补 move_flags / mount_creature_uid / grapple_node_id / wall_normal_*；Schema 见 docker/mysql/05-scene_db.sql（map_grapple_nodes / player_vehicle / creature_template / land_plots / crop_instances）。
+310|Normal|完整对照与测试见 docs/open-world-top-tier.md（P7 章节）、OpenWorldP7FeelFlowTest、OpenWorldP7EdgeCaseTest、OpenWorldP7BusinessFlowTest、BattleReactionBusinessFlowTest。
+311|Heading 3|5.2.6 P8 公会与深渊（社交留存 / 长线练度）
+312|Normal|对照与测试见 docs/guild-abyss.md、docs/open-world-top-tier.md（P8）、GuildBusinessFlowTest、AbyssBusinessFlowTest、ChatGuildRosterFlowTest。
+313|Heading 3|5.2.7 P9 长线养成 / 立体战斗 / 生态社交 / 韧性手感 / 探索终局
+314|Normal|完整对照与测试见 docs/open-world-top-tier.md（P9 章节）、OpenWorldP9FlowTest、OpenWorldP9EdgeCaseTest、OpenWorldP9BusinessFlowTest、RelicLockEnhanceTest。门面仍为 OpenWorldGameplayFacade；场景入口 InternalOpenWorldController；背包入口 InternalBagController（/internal/bag/relic/*）。
+315|Heading 3|5.2.8 P10 活物生态 / 立体动作融合 / 地貌元素连锁 / 服务器纪元 / 野外攻城与不对称 / 制造交易 / 命中手感 / 集群 AI
+316|Normal|完整对照与测试见 docs/open-world-top-tier.md（P10 章节）、OpenWorldP10FlowTest、OpenWorldP10EdgeCaseTest、OpenWorldP10BusinessFlowTest。门面仍为 OpenWorldGameplayFacade；场景入口 InternalOpenWorldController（/ecosystem/*、/affinity/*、/grapple/pull-enemy|swing-kick、/vehicle/cast-skill|poise-hit、/climb/attack、/terrain/*、/projectile/swirl、/epoch/*、/faction/*、/cutscene/evaluate、/siege/*、/asymmetric/*、/craft/*、/auction/*、/hit-feedback、/pre-playback/*、/squad/command、/env-ai/pickup）。逻辑包路径：mmorpg-common/.../world/{ecosystem,traverse,puzzle,narrative,endgame,economy,battle,ai}。协议扩展：MsgId 2090 / 2200 / 2210–2221 / 2400。
+317|Heading 2|5.3 战斗域与 AI
+318|Heading 3|5.2.9 P11 队伍共鸣 / 传说状态机 / 图鉴负反馈 / 指挥标记 / 地形冷却 / 肉鸽命运卡
+319|Heading 3|5.2.10 P12 性能瓶颈加固（并发 / GC / AOI / Tick / DB / 锁 / 冷热分离）
+320|Normal|代码详见 docs/open-world-top-tier.md P12 节；测试：PerformanceHardeningFlowTest、PerformanceHardeningIntegrationTest。
+321|List Bullet|并发：SceneActorMailbox（Actor 信箱）+ BusinessBatchConsumer（无锁批量消费）+ DispatchThreadModel stripe；game.dispatch.use-batch-consumer 可开关。
+322|List Bullet|GC：MoveCmdPool 复用移动指令槽位；PrimitiveGridStore 用 long[] 存网格坐标，SceneActorService.handleMove 已接入。
+323|List Bullet|AOI：AoiDeltaEncoder 字段级增量 + AoiBroadcastStrategy 三级频次（10m/30m/50m）+ AoiUpdateBatcher 合并；game.scene.aoi-near/mid/far-distance 可配。
+324|List Bullet|Tick：GameplayTickSlicer 20 片分帧（budget 5ms）；生态 AI 异步 runAsyncFireAndForget，不阻塞主场景线程。
+325|List Bullet|DB：PlayerWritePipeline（50 条/1s batch）+ AssetWalWriter（WAL）；game.player.write-pipeline-ms 可配。
+326|List Bullet|锁：RedisAtomicScriptService Lua 原子升级/首杀；POST /internal/scene/open-world/world-level/upgrade。
+327|List Bullet|冷热：HistoricalDataRetention（热 3 天/冷 7 天 OSS）+ SimpleBloomFilter（图鉴/神瞳）+ BattleReplayService 强制归档。
+328|List Bullet|观测：GET /internal/scene/open-world/metrics/performance → performance.concurrency/gcPooling/aoi/tick/persistence。
+329|Normal|完整对照与测试见 docs/open-world-top-tier.md（P11 章节）、OpenWorldP11FlowTest、OpenWorldP11EdgeCaseTest、OpenWorldP11BusinessFlowTest（mmorpg-common 门面 + scene-service Internal API）。门面仍为 OpenWorldGameplayFacade；场景入口 InternalOpenWorldController（/team/resonance/refresh、/story/instance/*、/handbook/*、/squad/quick-mark、/move/admit 支持 BOUNCE+terrainCell、/rogue/start|settle）。逻辑包：world/team、world/narrative（StoryStateMachine/InstanceRegionLockService）、world/sideplay/HandbookService、world/endgame/RogueFateCardService；扩展 SquadCommanderService、SiegeWarService、WorldMutabilityService.TerrainInteractionTracker、MovementAdmissionService、RegionImpactService。协议：MsgId 2230 QUICK_MARK、2231 MARK_TARGET、2450 STORY_INSTANCE_START；RetCode.TERRAIN_EXHAUSTED=170。
+330|Normal|能力概要：TeamCompositionService（队伍共鸣→WorldBuff）；StoryStateMachine + InstanceRegionLockService（传说状态机与潮汐锁）；HandbookService + applyResourceBarren（图鉴与资源贫瘠）；SquadCommanderService.quickMark + SiegeWarService.armFocusFire（指挥标记/集火+15%/5s）；TerrainInteractionTracker（地形冷却，RetCode 170）；RogueFateCardService（命运卡与潮汐净化闭环）。
+331|Normal|战斗负责开战、行动、结算，并发布 BattleEnded 等事件供活动/任务订阅。状态常在 Redis；活跃战斗用 SET 索引，避免 KEYS 全库扫描。元素反应（含 GaugeUnit 与精通倍率、残留）、客户端预测与 rollback、Boss BT 调试接口与 ThreatTable 仇恨表均已落地。红线：实时战斗不引入 LLM。 另扩展深渊包 cn.itcast.demo.mymmorpg.abyss：InternalAbyssController（/internal/battle/abyss/start|chamber/finish|progress|config/reload），星级里程碑经 Hall /internal/hall/mails/send 发系统邮件；测试见 AbyssServiceTest / AbyssBusinessFlowTest。 P10 另增 SquadCommanderService（小队齐射/盾墙/狂暴）与 EnvironmentUtilizationAI（环境投掷独占），仍走规则/行为树，禁止 LLM。P11 在此基础上扩展 quickMark/集火增伤，以及肉鸽命运卡与 RegionImpact 潮汐净化闭环。
+332|Heading 3|5.2.11 P13 体验优化（探索便利 / 移动流畅 / 生态沉浸 / 战斗辅助 / 长线减负）
+333|Normal|代码详见 docs/open-world-top-tier.md P13 节；门面 OpenWorldGameplayFacade；GET /gameplay/status?playerId=&regionId= 返回 compass/map_markers/exploration_impacts 等 P13 快照。
+334|List Bullet|探索：ExplorationCompassService（70% 解锁雷达）、MapMarkerService、ExplorationWorldImpactService；collectWithExplorationFeedback 联动区域进度与世界影响。
+335|List Bullet|移动：RegionalTraverseService、ClimbRestPointService（MovementAdmissionService 集成歇脚点）、UniversalTraversalService（HOOK/GLIDE/CLIMB/GRAPPLE/SWIM 账号级解锁）。
+336|List Bullet|生态：EcoNarrativeBridgeService、EnvironmentalStoryService、WorldExplorationFeedbackService。
+337|List Bullet|战斗：CombatAssistService（CLASSIC/SIMPLIFIED + HitFeedbackService 增强反馈）。
+338|List Bullet|减负：ResourceAutomationService、FlexibleDailyQuestService、BuildRecommendationService。
+339|List Bullet|测试：OpenWorldP13FlowTest / OpenWorldP13EdgeCaseTest（common）；OpenWorldP13BusinessFlowTest（scene Internal API 全链路）。
+340|Heading 2|5.4 背包、体力、词条与发奖幂等
+341|Normal|发奖强调幂等（同一凭证只成功一次）。邮件附件经 MailItemGrantPort 进背包。玩家与背包可冷热分离：Redis 热数据 + 定时刷 MySQL。体力 /internal/bag/resin*；装备随机词条 EquipRandomizer；装备强化 /internal/bag/equip/enhance（种子伪随机 + Redis/本地锁）。 另提供 POST /internal/bag/consume 按道具模板 ID 批量扣减（公会创建等），数量不足返回 BagRetCode.COUNT_NOT_ENOUGH。装备表预留 suit_id 字段（本轮不匹配套装效果）。 P9：POST /internal/bag/relic/lock 消耗锁定道具固定副词条索引；强化时 EquipEnhanceService/RelicScoringService 伪随机跳过锁定位，缓解「强化歪了」；POST /internal/bag/relic/enhance 走圣遗物塑形路径。suit_id 套装共鸣完整匹配仍属后续。
+342|Heading 2|5.5 商城、支付、战令与对账
+343|Normal|P0 经济硬化：订单双写 shop_order、支付事件 mq_outbox、发奖/累充幂等（grant_idempotency / mq_inbox）、流水账本（wallet_ledger / item_ledger）、对账 POST /internal/shop/orders/reconcile。开发可用 MOCK；生产禁用 MOCK 并配置渠道密钥。战令/月卡/首充走 PassService。
+344|Heading 2|5.6 活动、签到与世界事件
+345|Normal|活动配置模型较完整（条件、阶段、商店货品、展示、导入校验）。可消费商店已支付与战斗结束消息。SignInService 提供签到/月卡日领。世界事件提供排期、伤害与 grantPlans 结算钩子。
+346|Heading 2|5.7 抽卡服务
+347|Normal|独立 gacha-service（8994，可嵌入）。协议约 14xx；保底/十连/天井/历史；GET /internal/gacha/probability 概率公示；GET /internal/gacha/audit 审计；GAME_GACHA_REMOTE_ENABLED 切换远程。
+348|Heading 2|5.8 匹配系统
+349|Normal|队列在 Redis，SET NX + Lua 降低错配；可分片与跨 shard 配对；互补评分照顾久等玩家。跨服副本匹配 type=3，场景 9100+modeId。
+350|Heading 2|5.9 管理后台与热更新
+351|Normal|Admin：配置导入、投诉、操作日志、AI 草稿、分阶段 reload（activity→update→quest→player）、发布审计、配置 Diff/回滚/灰度/引用完整性、运营控制台 ops-console.html。RBAC 预设：OPS / PLANNER / CS / SUPERADMIN。鉴权：IP 白名单 + HMAC/API Key；生产强制开启。
+352|Heading 2|5.10 网关、就近接入与功能号段路由
+353|Normal|Gateway 可按 X-Account-Id 等粘滞到同一 player 实例；GeoIP/区域头注入就近信息；FunctionNumberRoutingFilter 按 X-Msg-Id 把移动路由到 Scene、背包到 Bag 等，削弱中转瓶颈。
+354|Heading 2|5.11 反作弊与客户端完整性
+355|Normal|AntiCheatService + AntiCheatRuleEngine + ClientIntegrityChecker（Root/模拟器等）；场景移动与伤害校验 API，累计违规可临时封禁。
+356|Heading 2|5.12 公会域（guild-service）
+357|Normal|独立微服务端口 8998，库 guild_db（表 guild / guild_member / guild_tech）。运行态以内存索引 + Redis 热键（guild:boss:damage:{guildId}、guild:last_active:{guildId}）为主，DDL 已就绪可后续接 JPA。创建扣背包不足返回 ERR_INSUFFICIENT。远征仅会长可开；结算产出 grantPlans 经 bag grant 发公会币。
+358|Normal|关键 API：POST /internal/guild/create|join|leave|transfer|tech/upgrade；GET /internal/guild/{id}|/mine；远征 /expedition/open|damage|settle；聊天同步 /internal/chat/guild/created|/member/sync；背包扣费 /internal/bag/consume。定时：每日 4:00 会长转让扫描，每周一 5:00 远征重置。单测：GuildServiceTest / GuildBusinessFlowTest；说明 docs/guild-abyss.md。
+359|Heading 1|第六章 数据、消息与一致性
+360|Heading 2|6.1 MySQL 与 Redis 分工
+361|Normal|MySQL 像保险箱账本；Redis 像前台便签与计分板。重要结果落库，高频读写用 Redis。
+362|Heading 2|6.2 多库与迁移
+363|Normal|多库：player_db / battle_db / activity_db / update_db / scene_db / guild_db。权威 DDL 在各服务 schema/*.sql 与 docker/mysql/；Compose 首次启动自动建库挂载（含 06-guild_db.sql）。Flyway 已在 player/activity/shop 等启用。活动进度以 Redis JSON 为主。单体模式通常只需 player_db；微服务需各域库齐全。
+364|Heading 2|6.3 消息队列与最终一致
+365|Normal|开发默认关闭 RocketMQ（NoOp）；生产依赖事件链路须 ROCKETMQ_ENABLED=true。必须可靠的事件：商店已支付→活动充值进度；战斗结束→活动/任务进度（Inbox 幂等，另有 HTTP 投影兜底）。Outbox/Inbox、死信队列、MqLagMonitor 支撑可靠投递与积压观测。
+366|Normal|「最终一致」不是允许错账，而是允许极短时间各处不完全一样，最终通过重试、幂等与补偿达成正确状态。
+367|Heading 2|6.4 TLog 与日志治理
+368|Normal|TLogEventPublisher 默认结构化日志；可选 Kafka。LogDesensitizer 脱敏；LogSamplingFilter 采样；TraceContext 跨线程 TraceId，与网关 X-Trace-Id 贯通。
+369|Heading 1|第七章 安全、风控与生产意识
+370|Heading 2|7.1 内部 API HMAC
+371|Normal|/internal/** 使用 HMAC-SHA256（时间戳 + 签名 + 玩家头等）。生产强制开启并拒绝弱密钥。各服务密钥必须一致；时钟偏差过大会导致验签失败，需 NTP。
+372|Heading 2|7.2 后台安全
+373|List Bullet|IP 白名单、API Key / HMAC、RBAC 权限点、操作日志。
+374|List Bullet|生产样例：ADMIN_AUTH_ENABLED=true，强随机 ADMIN_HMAC_SECRET / ADMIN_API_KEY。
+375|Heading 2|7.3 会话、TLS 与密钥
+376|Normal|会话 RSA 生产必须固定密钥；开发未配置可临时生成。可配置服务/网关 SSL。Nacos 本机可关认证，共享环境务必开认证。
+377|Heading 2|7.4 支付与反作弊
+378|Normal|支付验签、对账、幂等履约；反作弊降低外挂收益。不能指望客户端诚实上报结果。
+379|Heading 1|第八章 环境变量与配置矩阵（精要）
+380|Normal|完整样例见仓库 .env.example。下表帮助理解「开发随便、生产严格」。
+382|Heading 1|第九章 本地运行、测试、CI 与压测
+383|Heading 2|9.1 最小启动
+384|List Number|安装 JDK 17、Maven、Docker。
+385|List Number|docker compose up -d mysql redis
+386|List Number|复制 .env.example 为 .env
+387|List Number|启动 player-service（dev profile）
+388|List Number|用客户端或协议工具验证
+389|Heading 2|9.2 测试分层
+391|Normal|各模块有 testng-unit.xml / testng-integration.xml；根目录 test-suites 有聚合套件。GitHub Actions CI：unit-tests + 带 MySQL/Redis service 的 integration-tests。
+392|Heading 2|9.3 可观测性
+393|Normal|Actuator 暴露 health/info/metrics/prometheus；告警骨架在 deploy/observability/。Feign FallbackFactory 覆盖 scene/hall/battle；熔断示例见 circuitbreaker-example.yml。建议接入 ELK/Loki 以 TraceId 检索；生产可接 Zipkin/OpenTelemetry。
+394|Heading 2|9.4 压测
+395|Normal|perf/ 目录含 JMeter/Gatling 脚本；GET /internal/scene/open-world/metrics/performance 观测 P12 指标；POST .../mixed-load-benchmark 混合压测；PerformanceHardeningFlowTest + PerformanceHardeningIntegrationTest 回归。注意：单进程基准 ≠ 集群千人同屏验收。
+396|Heading 2|9.5 Redis Sentinel
+397|Normal|高可用可用 docker-compose.redis-sentinel.yml，profile 叠加 redis-sentinel 并配置哨兵节点。
+398|Heading 1|第十章 能力成熟度对照表
+399|Heading 2|10.1 已实现（工程可用）
+400|List Bullet|单体/微服务双模式；内部 HMAC 与生产密钥校验；Admin 导入/热更/审计/Diff/回滚/RBAC。
+401|List Bullet|Center 路由、迁移票据、分线、重连保护、AOI、动态域、无缝交接、WorldState 等大世界底座。
+402|List Bullet|元素反应、体力、词条、战令/月卡/签到、CoopRoom、队伍、助战、家园；P6：垂直移动/DoT Zone/引导链/CHAOS 诅咒/精通反应/装备强化/Boss 贡献分档与 MVP；P7：完美闪避/弹反与子弹时间、钩锁/载具、可破坏环境、捕捉驯服骑乘、多人协同解谜、编年史 global_flag、家园种植烹饪、空中冲刺/壁走、突破本、战斗指令重播。；P9 已接入门面与 Internal API（见 5.2.7）；P10 已接入（见 5.2.8）：生态亲密度、钩锁拉拽/载具战斗、地貌感电冰封、纪元拉锯、攻城与躲猫猫/竞速、制造交易所、HitStop/预表现、集群与环境 AI。
+403|List Bullet|抽卡、挑战、肉鸽、匹配分片、排行榜、邮件附件幂等发奖；P8：公会（创建/科技/远征分档/聊天 roster/会长转让）与深渊（12 间连打/星级/里程碑邮件/半月重置）；P9：命座机制覆盖、圣遗物定向锁定、专武特效触发、下落重击、水下物理、稀有精英、跟随采集、家园守卫偷菜、幻影引导、韧性/预输入、区域觉醒、世界之核；P10：生态状态机与亲密度协助、钩锁物理/载具战斗/毁崖攀爬攻击、地貌元素连锁与弹道偏转、服务器纪元与阵营拉锯、野外攻城与不对称竞技、制造树与拍卖行、命中反馈与预表现回滚、小队指挥与环境 AI。；P11：队伍元素共鸣 WORLDBUFF、传说任务状态机与区域潮汐锁、生活图鉴与资源贫瘠、指挥 MARK_TARGET/集火增伤、弹射蘑菇地形冷却、肉鸽命运卡与潮汐净化闭环。
+404|List Bullet|P12 性能加固：Actor 信箱、MoveCmd 对象池、AOI 增量与三级频次、Tick 分片、写流水线/WAL、Lua 原子世界等级升级、布隆过滤器与战斗重播冷热归档；已接入 SceneActorService、DispatchThreadModel、OpenWorldRuntimeService。
+405|List Bullet|P13 体验优化：探索罗盘/地图标记/探索度世界影响、区域滑索与攀爬歇脚、通用探索套件去角色绑定、生态叙事与环境叙事、探索正向反馈、战斗简化模式、资源自动化/灵活日常/智能养成；已接入 OpenWorldGameplayFacade、InternalOpenWorldController、MovementAdmissionService。
+406|List Bullet|支付对账骨架、反作弊、Feign 熔断、冷热分离、TLog、CI 与质量门禁。
+407|List Bullet|智能 NPC / AI 顾问 / Boss BT / Admin AI 内容草稿。
+408|Heading 2|10.2 演示级
+409|List Bullet|部分奖励数值为演示常量；世界 BOSS grantPlans 需继续接完整履约。
+410|List Bullet|跨服场景已接 K8sSceneAllocator/HPA/Agones 清单与 SceneBackgroundPrecreator 秒切预创建。
+411|List Bullet|支付渠道为适配器骨架，官方 SDK 需替换 HTTP 占位。
+412|List Bullet|GeoIP 为粗解析；Admin Web 为静态控制台而非完整表编辑器。
+413|List Bullet|RocketMQ / TLog Kafka 开发默认关闭。
+414|Heading 2|10.3 计划中
+415|List Bullet|player 去除剩余域 Maven 依赖，真正 gateway-only。
+416|List Bullet|完整 RedLock、官方支付 SDK、KCP 更深对齐。
+417|List Bullet|真实 GSLB、跨区域多活、集群千人同屏压测进 CI、mTLS + Vault 轮转、可选实时语音等。
+418|List Bullet|装备套装共鸣完整匹配、钓鱼 QTE、对话树/连载任务链、世界奇遇池、个人名片 player:profile（字段已定稿，部分玩法链未接完）。命座机制挂载与圣遗物定向锁定已移入「已实现（P9）」。 P10 与 P11 所列能力已移入「已实现」。交易所独立微服务进程仍可后续从 AuctionHouseService 拆出（端口约定 8999）。
+419|Heading 1|第十一章 典型业务故事
+420|Heading 2|11.1 登录并走进大世界
+421|List Number|登录拿到会话；玩家服记在线并规划场景节点/分线。
+422|List Number|移动时 AOI 只同步附近对象；过密可能换线或换 Zone。
+423|List Number|跨节点传送签发票据，目标验票；接近 Portal 可预加载。
+424|List Number|短时掉线可 Resume，并有短暂保护期。
+425|Heading 2|11.2 打完挑战，活动进度 +1
+426|List Number|开战转到战斗域；结算后发 BattleEnded。
+427|List Number|活动/任务幂等消费，更新胜利次数等。
+428|List Number|玩家领奖进入背包（幂等）。
+429|Heading 2|11.3 充值礼包到账
+430|List Number|下单落库 → 渠道回调验签 → Outbox 可靠投递。
+431|List Number|发货与累充幂等；活动充值进度更新。
+432|List Number|对账发现差异则人工/自动补单。
+433|Heading 2|11.4 策划上线新活动
+434|List Number|JSON/CSV 校验后经 Admin 或 CLI 导入。
+435|List Number|分阶段 reload；发布审计留痕。
+436|List Number|玩家侧看到新活动（视资源与配置而定）。
+437|Heading 2|11.5 十连抽卡
+438|List Number|客户端发 14xx 抽卡命令（或 HTTP 内部接口联调）。
+439|List Number|抽卡服计算保底/天井，写历史。
+440|List Number|道具经背包幂等发放；概率与审计可对外公示。
+441|Heading 2|11.6 大世界探索纵深旅程（P5）
+442|List Number|玩家靠近环境物体 POST /env/interact：服务端判定元素反应，并 fire ECA 规则（如火+藤蔓+夜晚→隐藏路径），必要时写入 physics_layer 供 AOI 广播。
+443|List Number|POST /puzzle/advance 逐步破解 JSON 配置的解谜实例；完成后 markPuzzleSolved，解锁 sealed-sanctum 等奇观入口。
+444|List Number|POST /collectible/collect 收集分级宝箱/神瞳；同步 markCollectible 计入 region_progress。
+445|List Number|GET /region/progress 达阈值解锁声望 grantPlans（翅膀、名片、食谱等）。
+446|List Number|char_venti 绑定解锁 GLIDE → 进入 floating-ruin；清营变 SAFE → Boss 可召唤 + 商队事件链启动。
+447|List Number|POST /mark/place 分享 BOSS 提醒；POST /phantom/leave 留下残影；区域频道 broadcast-elite 后其他玩家 JoinBattle 独立结算。
+448|List Number|策划 POST /placement/fill 程序化洒点；改配置后 POST /config/patch + /config/reload 只刷新指定 grid_cell。
+449|Heading 2|11.7 二游手感纵深旅程（P6）
+450|List Number|解锁 CLIMB/GLIDE 后 POST /move/admit：攀爬校验 mesh 与体力阶梯扣除；风场内滑翔减耗。
+451|List Number|POST /physics/apply kind=FIRE → 自动注册燃烧 DoT Zone；POST /physics/zone/tick 对进入实体结算伤害。
+452|List Number|POST /guidance/start → advance 仙灵节点 → particles AOI 广播 → 终点 chestCollectibleId。
+453|List Number|POST /collectible/collect 携带 worldLevel 与 regionExplorationRate，动态抬升宝箱品质。
+454|List Number|区域 enterChaos 后 /region/affliction/tick 叠 CurseLayer；POST /region/cleanse 交互净化锚点。
+455|List Number|战斗侧 resolve(..., gauge, mastery) 结算精通蒸发/残留；背包 POST /equip/enhance 每 4 级成长副词条。
+456|List Number|世界事件 damage + assist → settle 百分位发奖；POST /channel/broadcast-mvp 广播 MVP 与最高伤害。
+457|Heading 2|11.8 动作感与世界纵深旅程（P7）
+458|List Number|攻击开窗 POST /reaction/open-window → 窗口内 POST /reaction/validate（PERFECT_DODGE）→ bulletTimeStart；结算 settleScore 计入掉落权重。
+459|List Number|解锁 HOOK 后 POST /grapple/admit 或 /move/admit movementType=GRAPPLE；载具 /vehicle/board → /vehicle/sync（200ms 纠偏）。
+460|List Number|POST /mutability/damage damageType=HEAVY_ATTACK 达阈值 → MutationBroadcast；定时 /mutability/respawn-scan 分帧重生。
+461|List Number|两人同 Zone POST /coop-puzzle/press 满员 → CoopPuzzleStart；ECA 条件 REQUIRE_PARTY_MEMBERS。
+462|List Number|POST /chronicle/choose 写入 BitMap；GET /chronicle/global-flag 若屠龙占比≥80% 则 Boss 刷新倍率×1.5。
+463|List Number|POST /homeland/plant → 好友浇水 → harvest 惰性结算 → /homeland/cook 消耗作物产出随机品质料理。
+464|List Number|POST /move/admit moveFlags=MID_AIR_DASH 扣 20 体力；WALL_RUN 校验法线夹角并回写 wallNormal。
+465|List Number|经验溢出后 POST /ascension/enter 进独立突破本 → 胜利 /ascension/settle 升级 WorldLevel（加锁）并首通广播。
+466|List Number|POST /creature/catch（服务端摇奖）→ /creature/tame 命名 → /creature/mount 骑乘 AOI 同步。
+467|List Number|战斗 POST /replay/start|append → Admin /replay/playback 以 2x/4x 回放并校验伤害区间。
+468|Heading 2|11.9 创建公会并打远征（P8）
+469|List Number|创建公会：背包扣摩拉+原石 → 写入公会组织 → 通知 chat 创建频道并同步会长 roster。
+470|List Number|会长开启远征；成员上报伤害写入 ZSET；settle 按伤害百分位发公会币（金/银/铜）。
+471|List Number|每周一 5:00 自动重置远征；会长连续 7 日未登录，系统转让给副会/最高贡献成员。
+472|Heading 2|11.10 深渊连打满星领奖（P8）
+473|List Number|POST /internal/battle/abyss/start 进入第 1 层第 1 间，下发渊月祝福与怪组。
+474|List Number|每间通关按剩余时间计 1～3 星；失败不推进房间，血量/能量可保留重试。
+475|List Number|累计达 9/12/15 星时自动发系统邮件（原石 / 原石+圣遗物碎片），本期不再重复发；1/16 日 5:00 清星重置。
+477|Heading 1|第十二章 团队角色如何协作
+478|Heading 2|11.11 命座解锁到区域觉醒（P9）
+479|List Number|消耗命座材料解锁 → AttributeRecalc；施法走 constellation_buff_override；消耗锁定道具固定词条后再强化，避免歪强化。
+480|List Number|高空 ACTION_FALL_HEAVY 满足高度/速度后结算倍率伤害，未命中则服务端强制落地硬直；进入 BIOME_UNDERWATER 后突进缩距、火雷爆炸改为导电 DoT。
+481|List Number|格子杀怪达标刷出金光精英并 AOI 预警；开启跟随采集后额外产出直入背包。
+482|List Number|好友偷菜≤20%；若房主安装守卫则失败并减速 30s；高难解谜失败 3 次推荐幻影路径引导。
+483|List Number|破韧打空韧性触发 EXECUTION_TRIGGER；开大设置超级装甲免疫打断；闪避窗口后 100ms 内可预输入重击，超时服务端 INPUT_CLEAR。
+484|List Number|探索度达 100% → REGION_MASTERY 广播 EPIC_MVP 并获得 72h 全属性 +5% Buff；奇观全解锁后创建世界之核 4 人房。
+485|Heading 2|11.12 生态亲密度到攻城与交易所（P10）
+486|List Number|靠近野生生物触发惧怕逃逸；定时生态 Tick 驱动睡眠/进食；喂食 FOOD_ITEM 提升亲密度后，宠物提示附近 HIDDEN 宝箱，稀有精英出现时提前 CREATURE_ALERT。
+487|List Number|钩锁拉向轻体敌人或被重体反拉；摆荡最高点踢技按速度倍率结算；骑乘载具释放车载技能，韧性耗尽弹射滑翔；攀爬轻攻击打断非霸体；重击毁崖开通新攀爬路。
+488|List Number|水池打出 OVERLOAD 整池感电；高湿度冰封河面改变通行与压板解谜；风系扩散偏转敌方箭矢并显示元素残留衰减条。
+489|List Number|全服屠龙票数达阈值推进纪元，雕像与天气永久覆写并同步全分线；向阵营交付资源，周结算胜方占领区域获采集 Buff。
+490|List Number|最多 20 人野外攻城破坏 Boss 部位并用四元素法阵破盾；或进入躲猫猫（变形鉴权 + 扫描高亮）/ 载具钩锁竞速拿限时称号。
+491|List Number|多级制造异步完成后邮件领取（可暴击）；交易所上架冻结背包，一口价成交扣 5% 手续费。
+492|List Number|命中下发 HitStop + 镜头震动；普攻先播 PRE_IMPACT，校验失败客户端 ROLLBACK。小队 AI 盾墙齐射，旁侧 AI 独占投掷巨石。
+493|Heading 2|11.13 配队共鸣到肉鸽治世界（P11）
+494|Heading 2|11.14 探索罗盘到智能养成（P13）
+495|Normal|探索度达 70% → GET /compass/status 解锁 → POST /compass/probe 标记剩余宝箱/挑战；GET /map/markers 查看已收集/未收集；GET /explore/world-impact 触发路径/NPC/事件。
+496|Normal|POST /traverse/universal/grant-kit 账号解锁钩锁/滑翔/攀爬；POST /traverse/regional/use 使用滑索；攀爬命中歇脚点 POST /move/admit 恢复体力。
+497|Normal|POST /eco/narrative/evaluate 生态×任务；POST /env/story/inspect 环境叙事；POST /explore/feedback 清理营地解锁捷径。
+498|Normal|POST /combat/assist/mode SIMPLIFIED 开启辅助；POST /automation/build + /automation/claim-all 自动产出；POST /daily/report 多路径日常 + /daily/claim-all；GET /build/recommend + POST /build/apply 一键养成。
+499|Normal|队伍变更 POST /team/resonance/refresh（如双火+双水）→ 返回 resonance_id / attribute_modifiers，并注入战斗期 WorldBuff，客户端展示「双火激活」。
+500|Normal|触发角色传说 POST /story/instance/start → MsgId 2450 强制对话 UI；choose 选项回写个人编年史与 NPC 好感；任务期区域潮汐锁定；complete 解锁区域并领奖。
+501|Normal|捕捉/烹饪 POST /handbook/discover 首次发现发奖；达 80% 生物收集系统邮件发「图鉴收集者」名片；连续采集超日限 → 区域资源贫瘠 24h。
+502|Normal|攻城中队长 POST /squad/quick-mark（focusFire=true）→ 全队 MARK_TARGET；SiegeWarService 部位伤害临时 +15%/5s。
+503|Normal|踩弹射蘑菇 POST /move/admit movementType=BOUNCE：成功后格子进入冷却；再踩返回 TERRAIN_EXHAUSTED，播枯萎且不扣体力。
+504|Normal|肉鸽 POST /rogue/start 带 region_id：探索度≥60% 与最高亲密度生物注入命运卡；通关 /rogue/settle 增加潮汐净化，多次通关可将 CHAOS 转为 SAFE。
+505|Heading 1|第十三章 故障排查入门
+507|Normal|更完整步骤见 docs/troubleshooting.md；OpenAPI/Postman 见 docs/openapi.md。
+508|Heading 1|第十四章 协议号段与内部 API 速览
+509|Normal|游戏消息用数字消息号区分玩法。常见号段印象：皮肤约 12xx、挑战约 13xx、抽卡约 14xx、肉鸽约 15xx；场景传送重定向 retcode=27；ResumeScene 约 120/121。精确以 mmorpg-protocol 为准。
+510|Normal|内部 HTTP 前缀 /internal/**：战斗 start/action/end、活动世界事件、签到、背包 resin、大厅 coop/party/assist/home、商城 pass/对账、抽卡 probability/audit、场景 open-world、Admin /admin/** 等。命令型可为 Protobuf 流；Port 型多为 JSON；大世界 P7：reaction/grapple/vehicle/mutability/coop-puzzle/chronicle/homeland/ascension/replay；战斗 reaction/replay。；公会 /internal/guild/** 与 /internal/chat/guild/**；深渊 /internal/battle/abyss/**；大厅系统发信 /internal/hall/mails/send；背包扣费 /internal/bag/consume。；P9 大世界：/constellation/unlock、/skill/cast-resolve、/fall-attack/validate、/underwater/*、/rare-elite/kill、/creature/follow-harvest、/homeland/guard|steal、/phantom/puzzle-fail、/poise/hit、/input-buffer/*、/region/awaken、/world-core/*；背包 /internal/bag/relic/lock|/relic/enhance。；P10 大世界：/ecosystem/*、/affinity/*、/grapple/pull-enemy|swing-kick、/vehicle/cast-skill|poise-hit、/climb/attack、/terrain/*、/projectile/swirl、/epoch/*、/faction/*、/cutscene/evaluate、/siege/*、/asymmetric/*、/craft/*、/auction/*、/hit-feedback、/pre-playback/*、/squad/command、/env-ai/pickup。协议：2090 HitFeedback、2200 CreatureAlert、2210 GrapplePull、2220 VehicleCast、2400 ForcedCutscene。；P13：/compass/*、/map/markers、/explore/world-impact、/traverse/regional/*、/traverse/universal/*、/eco/narrative/evaluate、/env/story/inspect、/explore/feedback、/combat/assist/*、/automation/*、/daily/*、/build/*。
+511|Heading 1|第十五章 常见问题 FAQ
+512|Heading 2|Q1：没有编程基础能看懂吗？
+513|Normal|可以。先读第 1～3 章与业务故事，把服务当城市部门；建立直觉后再深入技术章。
+514|Heading 2|Q2：这是已上线的商业游戏吗？
+515|Normal|是完整度较高的服务端工程底座与示例。部分数值与结算仍是演示级；商业上线还需内容、合规、运维与更严压测。
+516|Heading 2|Q3：单体还是微服务？
+517|Normal|学习与本机演示优先单体；需要独立扩容与多人分工再开远程开关。
+518|Heading 2|Q4：没有客户端怎么办？
+519|Normal|可起服务看健康检查与日志；完整玩法通常需客户端或协议调试工具。仓库侧重服务端。
+520|Heading 2|Q5：目录和页码不显示？
+521|Normal|用 Word 打开，Ctrl+A 后按 F9，或右键目录「更新域」。WPS 一般也支持。
+522|Heading 2|Q6：数据会丢吗？
+523|Normal|持久数据在 MySQL，热点在 Redis；发奖与支付强调幂等与账本。仍需正规备份，示例不能替代完整容灾。
+524|Heading 2|Q7：如何导入活动配置？
+525|Normal|可用 Admin 接口或 mmorpg-cli：import activity / import manifest，配合 API Key 或 HMAC。
+526|Normal|可用 Admin/脚本热更 battle 侧 abyss_floor_config.json（POST /internal/battle/abyss/config/reload）；公会科技与远征参数当前为服务内定稿常量，DDL 已在 guild_db 预留持久化。
+527|Heading 2|Q8：如何配置深渊/公会？
+528|Heading 1|第十六章 名词小词典
+529|Heading 2|Q9：P9 命座/圣遗物/下落攻击如何联调？
+530|Normal|场景侧用 InternalOpenWorldController 对应 POST；背包侧 POST /internal/bag/relic/lock 后 enhance；回归套件：OpenWorldP9BusinessFlowTest（API 全链路）、OpenWorldP9FlowTest / EdgeCaseTest、RelicLockEnhanceTest。协议常量见 MessageId 1210–1212 与 212–219。
+531|Heading 2|Q10：P10 生态/钩锁载具/纪元攻城/交易所如何联调？
+532|Normal|场景侧统一走 InternalOpenWorldController 的 P10 POST（见 5.2.8）；回归套件：OpenWorldP10BusinessFlowTest（API 全链路）、OpenWorldP10FlowTest / OpenWorldP10EdgeCaseTest。协议常量见 MessageId 2090、2200、2210–2221、2400。权威说明 docs/open-world-top-tier.md（P10）。
+533|Heading 2|Q11：P11 共鸣/传说/图鉴/标记/地形/肉鸽如何联调？
+534|Heading 2|Q12：P12 性能指标与压测怎么看？
+535|Heading 2|Q13：P13 探索罗盘/辅助战斗/日常减负如何联调？
+536|Normal|答：场景侧 InternalOpenWorldController：/compass/*、/map/markers、/explore/world-impact、/traverse/regional/*、/traverse/universal/*、/combat/assist/*、/automation/*、/daily/*、/build/*。GET /gameplay/status?playerId=&regionId= 一次拉取 P13 状态。回归：mvn -pl mmorpg-common,scene-service test -Dtest=OpenWorldP13*。权威说明 docs/open-world-top-tier.md（P13）。
+537|Normal|答：GET /internal/scene/open-world/metrics/performance 查看聚合指标；移动热路径已接 MoveCmdPool + AoiDeltaEncoder；mvn -pl mmorpg-common,scene-service test -Dtest=PerformanceHardening* 跑回归。
+538|Normal|场景侧走 InternalOpenWorldController：/team/resonance/refresh、/story/instance/*、/handbook/*、/squad/quick-mark、/move/admit（BOUNCE+regionId/terrainCell）、/rogue/start|settle。回归套件：OpenWorldP11BusinessFlowTest（scene API 全链路）、OpenWorldP11FlowTest / OpenWorldP11EdgeCaseTest / OpenWorldP11BusinessFlowTest（common）。协议：MessageId 2230/2231/2450；RetCode.TERRAIN_EXHAUSTED=170。权威说明 docs/open-world-top-tier.md（P11）。
+539|Normal|【P11 队伍共鸣 / 传说状态机 / 图鉴负反馈 / 指挥标记 / 地形冷却 / 肉鸽命运卡】TeamCompositionService：4 人队元素组合计算 ElementResonance（双火+25%攻击、双水+生命上限等），以战斗期 WorldBuff 注入，POST .../team/resonance/refresh 返回 resonance_id 与 attribute_modifiers；StoryStateMachine（Idle→Talking→Escort→Combat→Reward）+ InstanceRegionLockService（任务期锁定区域潮汐，跳过 tickDecay），MsgId 2450 STORY_INSTANCE_START 下发带选项对话，选项回写个人编年史不影响全服；HandbookService（Redis 语义 handbook:{playerId}）首次发现奖励、收集≥80% 邮件发「图鉴收集者」名片，过度采集触发 RegionImpactService.applyResourceBarren（24h 产出↓，非伤害）；SquadCommanderService.quickMark（MsgId 2230/2231 MARK_TARGET）队长锁定目标全队 AOI 广播，集火部位伤+15%/5s（SiegeWarService.armFocusFire）；WorldMutabilityService.TerrainInteractionTracker（terrain:cooldown:{region}:{x}:{y}），BOUNCE/风场 admit 校验，耗尽返回 RetCode.TERRAIN_EXHAUSTED=170 且不扣体力；RogueFateCardService：开局读区域探索度≥60% 与最高亲密度生物注入命运卡/抗性，通关增加潮汐净化值加速 CHAOS→SAFE。测试：OpenWorldP11FlowTest / OpenWorldP11EdgeCaseTest / OpenWorldP11BusinessFlowTest（common + scene）。
+541|Heading 1|第十七章 仓库文档地图
+543|Heading 1|第十八章 总结
+544|Normal|它覆盖玩家入口、大世界（含 P5～P13
+545|Normal|请记住三句话：第一，客户端负责表现，服务器负责裁决与记账；第二，可以先合署办公（单体），再分局扩容（微服务）；第三，发奖与支付必须以幂等、验签、对账为底线——这是信任的基础。
+546|Normal|学生可用本文作课程设计说明骨架；转行者可作读源码导航；管理者可据此评估完整度与后续投入重点。
+547|Heading 1|附录 A 服务端口速查
+548|Normal|player 8989；scene 8981；chat 8982；bag 8983；skill 8984；admin 8985；hall 8986；quest 8987；matchmaking 8988；shop 8990；battle 8991（含深渊 abyss）；activity 8992；update 8993；gacha 8994；guild-service 8998；gateway 8443（可配置）；HomelandService 可拆独立微服务建议端口 8997（当前逻辑合入 scene/common）；AuctionHouseService / 制造交易逻辑可拆 trade-service 建议端口 8999（当前合入 scene/common）。
+549|Heading 1|附录 B 微服务远程开关速查
+550|Normal|GAME_SCENE/CHAT/BAG/SKILL/HALL/QUEST/MATCH/BATTLE/ACTIVITY/UPDATE/SHOP/GACHA_REMOTE_ENABLED=true；域服务 GAME_PORT_REMOTE_ENABLED=true 与 PLAYER_SERVICE_URL 等基址。详见 DEPLOYMENT.md。
+551|Heading 1|附录 C 文档信息
+552|List Bullet|生成日期：2026年08月22日（P12 性能加固）（P10 增补同日；P11 队伍共鸣/传说状态机/图鉴/指挥标记/地形冷却/肉鸽命运卡原地增补同日）
+553|List Bullet|语言：简体中文
+554|List Bullet|目标：面向所有人的全方位介绍，兼顾技术准确性
+555|List Bullet|排版：自动目录域 + 页脚「第 X 页 / 共 Y 页」
+556|List Bullet|输出路径：C:\Users\ASUS\Desktop\MyMmorpg项目全方位详细介绍文档.docx
+
+=== TABLES ===
+
+--- table 0 rows=13 cols=3 ---
+  r0: 技术 | 通俗理解 | 作用
+  r1: Java 17 | 主流服务端语言版本 | 全部业务代码基础
+  r2: Spring Boot 3.2 | 应用脚手架 | 各服务启动与配置
+  r3: Spring Cloud Alibaba | 微服务全家桶（可选） | 发现、远程调用等
+  r4: Netty | 高性能网络引擎 | TCP / UDP / KCP 长连接
+  r5: Protobuf | 紧凑消息格式 | 游戏协议
+  r6: MySQL 8 | 可靠账本 | 账号、邮件、订单、进度等
+  r7: Redis | 超快便签与计分板 | 在线、匹配、排行、票据、热数据
+
+--- table 1 rows=21 cols=2 ---
+  r0: 模块 | 角色说明
+  r1: mmorpg-protocol | 协议词典：*.proto、MessageId、RetCode
+  r2: mmorpg-domain-api | 跨服务 Port 合同（如背包命令/发货）
+  r3: mmorpg-common | 公共工具箱：网络、RPC、远程 Port 等
+  r4: mmorpg-gateway | 可选总门岗：区域、功能号段、粘滞
+  r5: player-service | 主入口；单体时嵌入多域
+  r6: scene-service | 场景 / AOI / 大世界
+  r7: battle-service | 战斗与 AI 队友 / Boss BT / 深渊（abyss）
+
+--- table 2 rows=17 cols=3 ---
+  r0: 服务 | 端口 | 职责
+  r1: player-service | 8989 | 客户端连接与玩家主入口
+  r2: scene-service | 8981 | 场景与大世界
+  r3: chat-service | 8982 | 聊天
+  r4: bag-service | 8983 | 背包
+  r5: skill-service | 8984 | 技能
+  r6: admin-service | 8985 | 后台
+  r7: hall-service | 8986 | 大厅社交
+
+--- table 3 rows=5 cols=3 ---
+  r0: 能力 | 实现类 | 主要 API
+  r1: ECA 规则触发器 | RuleTriggerService | POST .../rule/fire、GET .../rule/list
+  r2: 物理状态层（AOI 广播） | PhysicsLayerService | POST .../physics/apply、GET .../physics/a
+  r3: 解谜库（≥10 模板） | PuzzleTemplateService | GET .../puzzle/templates、POST .../instan
+  r4: 环境交互联动规则 | OpenWorldGameplayFacade.envInteractWithR | POST .../env/interact（自动 fire 规则+物理）
+
+--- table 4 rows=7 cols=3 ---
+  r0: 能力 | 实现类 | 主要 API
+  r1: 收集物分级/神瞳 | CollectibleService | POST .../collectible/collect、GET .../col
+  r2: 区域探索度/声望 | RegionProgressService | GET .../region/progress
+  r3: 奇观入口条件+LOD | LandmarkWonderService | POST .../landmark/enter、GET .../landmark
+  r4: 角色绑定世界技 | WorldSkillService | POST .../world-skill/unlock-mode
+  r5: 队伍生态位天赋 | EnvironmentInteractionService | POST .../env/gather-talent
+  r6: 野外篝火烹饪 | WorldCookingService | POST .../cook
+
+--- table 5 rows=8 cols=3 ---
+  r0: 能力 | 实现类 | 主要 API
+  r1: 区域 HOSTILE/CONTESTED/SAFE/CHAOS | RegionImpactService | POST .../region/clear-camp|anchor|tick-d
+  r2: Boss 联动与事件链 | RegionImpactService | GET .../region/boss-link、POST .../region
+  r3: 公共地图标记 | PublicMarkService | POST .../mark/place|thank
+  r4: 幻影残影回放 | WorldEncounterService | POST .../phantom/leave|play
+  r5: 区域频道蹭怪 | RegionWorldChannelService | POST .../channel/broadcast-elite|join-ba
+  r6: 程序化洒点 | ProceduralPlacementService | POST .../placement/fill
+  r7: grid_cell 配置热更 | OpenWorldConfigPatchService | POST .../config/patch|reload
+
+--- table 6 rows=12 cols=3 ---
+  r0: 能力 | 实现类 | 主要 API
+  r1: 移动状态机 | SceneMoveCmd + MovementType | POST .../move/admit
+  r2: 物理准入 | MovementAdmissionService | 攀爬 mesh / 滑翔风场校验
+  r3: 体力阶梯 | StaminaConsumeService | GET .../stamina
+  r4: 持续伤害区 | ZoneLifecycleManager | POST .../physics/zone/tick
+  r5: 引导链 | GuidanceChainService | POST .../guidance/start|advance|particle
+  r6: 动态宝箱品质 | CollectibleService.DynamicLootTier | collect 带 worldLevel/探索度
+  r7: CHAOS 诅咒/净化 | RegionImpactService | POST .../region/affliction/tick|cleanse
+
+--- table 7 rows=12 cols=3 ---
+  r0: 能力 | 实现类 | 主要 API / 协议
+  r1: 完美闪避/弹反 | ReactionValidator + BulletTimeService | POST .../reaction/open-window|validate；b
+  r2: 钩锁 GRAPPLE | GrappleNodeService | POST .../grapple/admit；MovementType.GRAP
+  r3: 载具 RIDE | VehicleSyncService | POST .../vehicle/board|sync（200ms 纠偏）
+  r4: 可破坏环境 | WorldMutabilityService | POST .../mutability/damage|respawn-scan
+  r5: 捕捉驯服骑乘 | CreatureCatchService | POST .../creature/catch|tame|mount
+  r6: 多人协同解谜 | CoopPuzzleService + REQUIRE_PARTY_MEMBER | POST .../coop-puzzle/press；POST .../rule
+  r7: 剧情编年史 | PlayerChronicleService | POST .../chronicle/choose；GET .../chroni
+
+--- table 8 rows=40 cols=5 ---
+  r0: 能力 | 能力 | 能力 | 实现类 | 主要 API / 协议
+  r1: 生态行为状态机 | 生态行为状态机 | 生态行为状态机 | EcosystemBehaviorService | POST .../ecosystem/tick|proximity
+  r2: 亲密度协助 | 亲密度协助 | 亲密度协助 | AffinityService | POST .../affinity/feed|treasure-hint|ale
+  r3: 种群承载力 | 种群承载力 | 种群承载力 | EcoCarryingCapacity + Placement | 洒点 ecoCapacity；过杀→刷新↓ + 作物减产
+  r4: 钩锁物理拓展 | 钩锁物理拓展 | 钩锁物理拓展 | GrapplePhysicsService | POST .../grapple/pull-enemy|swing-kick；M
+  r5: 载具战斗 | 载具战斗 | 载具战斗 | VehicleCombatService | POST .../vehicle/cast-skill|poise-hit；Ms
+  r6: 攀爬攻击 / 毁崖 | 攀爬攻击 / 毁崖 | 攀爬攻击 / 毁崖 | ClimbAttackService / Mutability | POST .../climb/attack；DESTROY_CLIFF
+  r7: 地貌改写 | 地貌改写 | 地貌改写 | TerrainMutationService | POST .../terrain/overload-water|freeze-w
+
+--- table 9 rows=9 cols=3 ---
+  r0: 变量/项 | dev | prod 要点
+  r1: MYSQL_PASSWORD | 可弱默认 | 强密码必填
+  r2: INTERNAL_API_SECRET | 可关校验 | 必填强密钥，开启校验
+  r3: ADMIN_AUTH_ENABLED | 常 false | 必须 true
+  r4: SHOP_PAYMENT_MOCK_ENABLED | true | 必须 false
+  r5: SESSION_RSA_* | 可空临时生成 | 必填固定密钥
+  r6: ROCKETMQ_ENABLED | false | 事件链路需 true
+  r7: GAME_*_REMOTE_ENABLED | false | 拆分时 true
+
+--- table 10 rows=4 cols=3 ---
+  r0: 类型 | 目的 | 命令
+  r1: 单元测试 | 快速验证逻辑 | mvn -B test
+  r2: 集成测试 | 带 MySQL/Redis 联动 | mvn -B test -Pintegration-tests
+  r3: 质量门禁 | JaCoCo≥10% + SpotBugs | mvn -B verify -Pquality-gate
+
+--- table 11 rows=7 cols=3 ---
+  r0: 角色 | 关心什么 | 主要模块
+  r1: 客户端 | 协议、同步、表现 | protocol、player 入口
+  r2: 服务端 | 正确性、性能、边界 | 各 *-service、common
+  r3: 策划 | 数值与配置 | config、Admin 导入
+  r4: 运营/客服 | 投诉、补单、封禁 | admin、对账
+  r5: 运维/SRE | 部署、监控、密钥 | Docker、网关、Prometheus
+  r6: 测试 | 回归、幂等、压测 | TestNG、CI、perf
+
+--- table 12 rows=18 cols=2 ---
+  r0: 现象 | 先查什么
+  r1: Redis 连不上 | compose ps、REDIS_HOST、actuator health
+  r2: 支付后没发奖 / MQ 积压 | mq_outbox 状态、死信、lag 指标、MQ 开关
+  r3: 内部 API 401 | 各服务密钥是否一致、时钟、生产校验
+  r4: 对账 mismatch | 渠道账单格式、自动对账开关、人工确认后再补单
+  r5: 传送黑屏 / 票据失效 | Portal 预加载 TTL、迁移票据 Redis 键、资源预载
+  r6: scene/battle 降级 | 熔断阈值、下游延迟、TraceId 拉链路
+  r7: 公会 Guild | 持久化玩家组织；科技加成 + 每周远征贡献分档
+
+--- table 13 rows=23 cols=2 ---
+  r0: 名词 | 一句话解释
+  r1: MMORPG | 大型多人在线角色扮演游戏
+  r2: 客户端 / 服务端 | 玩家程序 / 机房裁判与账本
+  r3: 单体 / 微服务 | 合署办公 / 分局独立部署
+  r4: 网关 | 统一入口与路由
+  r5: Protobuf / 长连接 | 紧凑消息格式 / 保持通道高频交互
+  r6: AOI / 分线 | 只同步附近对象 / 平行地图实例
+  r7: 幂等 | 同一请求多次执行不重复发奖
+
+--- table 14 rows=13 cols=2 ---
+  r0: 文件 | 内容
+  r1: README.md | 快速开始与模块一览
+  r2: DEPLOYMENT.md | 部署、环境变量、能力分层
+  r3: TESTING.md | TestNG 套件说明
+  r4: .env.example | 全量环境变量样例
+  r5: docs/troubleshooting.md | 拓扑与排障
+  r6: docs/openapi.md | OpenAPI / 协议 / Postman
+  r7: docs/open-world-top-tier.md | 大世界顶尖标准（含 P0～P11）

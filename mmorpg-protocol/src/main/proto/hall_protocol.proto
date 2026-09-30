@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package mmorpg.hall;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "HallProtocolProto";
+
+message FriendInfo {
+  uint64 player_id = 1;
+  string player_name = 2;
+  uint32 level = 3;
+  bool online = 4;
+}
+
+message GetFriendListCsReq {}
+
+message GetFriendListScRsp {
+  int32 retcode = 1;
+  repeated FriendInfo friends = 2;
+}
+
+message AddFriendCsReq {
+  uint64 target_player_id = 1;
+}
+
+message AddFriendScRsp {
+  int32 retcode = 1;
+  FriendInfo friend = 2;
+}
+
+message MailAttachment {
+  uint32 item_id = 1;
+  uint32 count = 2;
+  uint32 gold = 3;
+}
+
+message MailInfo {
+  uint64 mail_id = 1;
+  string title = 2;
+  string body = 3;
+  bool claimed = 4;
+  int64 created_at = 5;
+  repeated MailAttachment attachments = 6;
+}
+
+message GetMailListCsReq {}
+
+message GetMailListScRsp {
+  int32 retcode = 1;
+  repeated MailInfo mails = 2;
+}
+
+message ClaimMailCsReq {
+  uint64 mail_id = 1;
+}
+
+message ClaimMailScRsp {
+  int32 retcode = 1;
+  uint64 mail_id = 2;
+  uint32 gold_gained = 3;
+}
+
+message RankingEntry {
+  uint32 rank = 1;
+  uint64 player_id = 2;
+  string player_name = 3;
+  uint32 level = 4;
+  uint32 power_score = 5;
+}
+
+message GetRankingCsReq {
+  uint32 ranking_type = 1; // 1=level 2=power
+  uint32 limit = 2;
+}
+
+message GetRankingScRsp {
+  int32 retcode = 1;
+  uint32 ranking_type = 2;
+  repeated RankingEntry entries = 3;
+}

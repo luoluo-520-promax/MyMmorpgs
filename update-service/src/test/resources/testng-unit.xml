@@ -1,0 +1,11 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="update-service-unit">
+    <test name="unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.UpdateServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.VersionManifestImportServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.UpdateEnhancementFlowTest"/>
+            <class name="cn.itcast.demo.mymmorpg.web.ResourceRangeDownloadControllerTest"/>
+        </classes>
+    </test>
+</suite>

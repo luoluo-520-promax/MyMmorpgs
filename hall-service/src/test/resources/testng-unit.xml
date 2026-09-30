@@ -1,0 +1,18 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="hall-service-unit">
+    <test name="hall-unit">
+        <classes>
+            <class name="cn.itcast.demo.mymmorpg.service.HallServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.WorldEventSquadServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.WorldEventSquadFlowTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.FriendAssistServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.HomeVisitServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.PartyManageServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.AsyncSocialFlowTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.CoopRoomServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.CrossServerFriendServiceTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.CoopBossAndCrossFriendFlowTest"/>
+            <class name="cn.itcast.demo.mymmorpg.service.LightSocialBusinessFlowTest"/>
+        </classes>
+    </test>
+</suite>

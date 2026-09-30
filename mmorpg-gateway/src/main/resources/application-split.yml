@@ -1,0 +1,56 @@
+spring:
+  config:
+    activate:
+      on-profile: split
+  cloud:
+    gateway:
+      routes:
+        - id: player-service
+          uri: lb://player-service
+          predicates:
+            - Path=/player/**,/ws/**,/api/security/**
+        - id: scene-service
+          uri: lb://scene-service
+          predicates:
+            - Path=/scene/**
+        - id: scene-service-combat-fast
+          uri: lb://scene-service
+          predicates:
+            - Path=/internal/scene/fast-path/**
+          filters:
+            - name: RequestHeader
+              args:
+                name: X-Combat-Fast-Path
+                value: true
+        - id: chat-service
+          uri: lb://chat-service
+          predicates:
+            - Path=/chat/**
+        - id: bag-service
+          uri: lb://bag-service
+          predicates:
+            - Path=/bag/**
+        - id: skill-service
+          uri: lb://skill-service
+          predicates:
+            - Path=/skill/**
+        - id: battle-service
+          uri: lb://battle-service
+          predicates:
+            - Path=/battle/**
+        - id: activity-service
+          uri: lb://activity-service
+          predicates:
+            - Path=/activity/**
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/admin/**
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/internal/ai/**,/api/player/ai/**
+        - id: update-service
+          uri: lb://update-service
+          predicates:
+            - Path=/update/**

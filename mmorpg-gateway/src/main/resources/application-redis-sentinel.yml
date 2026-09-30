@@ -1,0 +1,9 @@
+# Profile: redis-sentinel
+spring:
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:}
+      sentinel:
+        master: ${REDIS_SENTINEL_MASTER:mymmorpg-redis}
+        nodes: ${REDIS_SENTINEL_NODES:127.0.0.1:26379}
+      timeout: 3s

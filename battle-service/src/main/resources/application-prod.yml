@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    password: ${MYSQL_PASSWORD:}
+
+game:
+  internal-api:
+    enabled: true
+    secret: ${INTERNAL_API_SECRET:}

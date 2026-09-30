@@ -12,10 +12,13 @@ import cn.itcast.demo.mymmorpg.entity.MonsterConfig; // 怪物模板：HP、攻�
 
 import org.springframework.data.jpa.repository.JpaRepository; // CRUD 基接口
 
+import java.util.List;
+
 /**
  * 怪物配置数据访问接口。
  * <p>战斗开战时按 {@code monsterTemplateId} 调用 {@link #findById(Object)} 加载怪物属性。</p>
  */
 public interface MonsterConfigRepository extends JpaRepository<MonsterConfig, Integer> { // 主键 monsterTemplateId
-    // 配置表一般只读，运行时刷怪引用 templateId 再查本仓储
+
+    List<MonsterConfig> findByMapId(Integer mapId);
 }

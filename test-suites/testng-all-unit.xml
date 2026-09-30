@@ -10,5 +10,9 @@
         <suite-file path="../player-service/src/test/resources/testng-unit.xml"/>
         <suite-file path="../battle-service/src/test/resources/testng-unit.xml"/>
         <suite-file path="../activity-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../hall-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../matchmaking-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../quest-service/src/test/resources/testng-unit.xml"/>
+        <suite-file path="../update-service/src/test/resources/testng-unit.xml"/>
     </suite-files>
 </suite>

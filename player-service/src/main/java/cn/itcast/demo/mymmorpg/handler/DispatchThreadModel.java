@@ -7,7 +7,9 @@
  * 5) 风险提示：若涉及并发、事务、MQ、Redis，请同步补充回归测试与监控指标。
  */
 package cn.itcast.demo.mymmorpg.handler; // player-service 协议 Facade 与消息 dispatch 管道
+import cn.itcast.demo.mymmorpg.concurrency.BusinessBatchConsumer;
 import jakarta.annotation.PreDestroy; // 容器关闭时优雅停止 dispatch 线程池
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value; // game.dispatch.stripes 分片数，0 表示按 CPU 核数
 import org.springframework.stereotype.Component; // MessageDispatchPipeline 注入，Netty/WebSocket 共用
 import java.util.concurrent.ExecutorService; // 分片单线程池数组，每片串行执行
@@ -22,19 +24,31 @@ import java.util.concurrent.atomic.AtomicInteger; // 线程名自增序号
 public class DispatchThreadModel { // playerId 或 marker.hashCode 映射 stripe，同 key FIFO 串行
     /** 分片线程池数组，长度即并行度；每个元素是单线程 Executor 保证片内 FIFO */
     private final ExecutorService[] stripes; // stripes[i] 单线程池，同 dispatchKey 始终落同一 i
-    public DispatchThreadModel(@Value("${game.dispatch.stripes:0}") int stripes) { // game.dispatch.stripes 配置业务分片数
-        int n = stripes > 0 ? stripes : Math.max(2, Runtime.getRuntime().availableProcessors()); // 0 时默认 CPU 核数，至少 2 片
-        this.stripes = new ExecutorService[n]; // 分配 n 个单线程 Executor 槽位
-        for (int i = 0; i < n; i++) { // 逐片创建单线程池
-            this.stripes[i] = Executors.newSingleThreadExecutor(new NamedFactory("dispatch-" + i)); // dispatch-i 线程串行执行同片任务
-        } // 编译单元结束
-    } // 编译单元结束
+    private final BusinessBatchConsumer batchConsumer;
+    private final boolean useBatchConsumer;
+
+    public DispatchThreadModel(
+            @Value("${game.dispatch.stripes:0}") int stripes,
+            @Value("${game.dispatch.use-batch-consumer:false}") boolean useBatchConsumer,
+            ObjectProvider<BusinessBatchConsumer> batchConsumerProvider) {
+        int n = stripes > 0 ? stripes : Math.max(2, Runtime.getRuntime().availableProcessors());
+        this.stripes = new ExecutorService[n];
+        for (int i = 0; i < n; i++) {
+            this.stripes[i] = Executors.newSingleThreadExecutor(new NamedFactory("dispatch-" + i));
+        }
+        this.useBatchConsumer = useBatchConsumer;
+        this.batchConsumer = batchConsumerProvider.getIfAvailable();
+    }
 
     /** 按 dispatchKey 取模选 stripe，将 ClientRequestTask 或 RPC 转发任务提交到对应单线程池 */
     public void submit(long dispatchKey, Runnable task) { // MessageDispatchPipeline 提交 ClientRequestTask 或 RPC lambda
         if (task == null) { // 防御空 Runnable
             return; // 忽略无效提交
-        } // 编译单元结束
+        }
+        if (useBatchConsumer && batchConsumer != null) {
+            batchConsumer.offer(task);
+            return;
+        }
 
         int idx = (int) (Math.floorMod(dispatchKey, stripes.length)); // 负数 playerId 也能正确取模到 [0,n)
         stripes[idx].submit(task); // 异步执行，Netty/WebSocket IO 线程立即返回继续读帧

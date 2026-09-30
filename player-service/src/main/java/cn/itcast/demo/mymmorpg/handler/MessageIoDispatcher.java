@@ -10,6 +10,7 @@ package cn.itcast.demo.mymmorpg.handler; // player-service 协议 Facade 与消�
 import cn.itcast.demo.mymmorpg.net.GameMessage; // GameMessageDecoder 解码产物：[msgId:4][protobuf bytes]
 import cn.itcast.demo.mymmorpg.net.ChannelAttrs; // 断线时读取 PLAYER_ID 做 unbind
 import cn.itcast.demo.mymmorpg.service.PlayerPushRegistry; // channelInactive 解除 playerId 推送绑定
+import cn.itcast.demo.mymmorpg.service.SceneCommandGateway;
 import io.netty.channel.ChannelHandler; // @Sharable 标记，同一实例可挂到多个 Channel pipeline
 import io.netty.channel.ChannelHandlerContext; // 构造 NettyDispatchSession、异常时 close Channel
 import io.netty.channel.SimpleChannelInboundHandler; // 泛型 GameMessage，自动释放 ByteBuf
@@ -27,11 +28,14 @@ public class MessageIoDispatcher extends SimpleChannelInboundHandler<GameMessage
     private final MessageDispatchPipeline pipeline; // handle(session,msgId,payload) 统一入口
     /** 推送注册表，连接断开时 unbind 避免向僵尸 Channel 推送 */
     private final PlayerPushRegistry playerPushRegistry; // channelInactive 读 PLAYER_ID 后 unbind
+    private final SceneCommandGateway sceneCommandGateway;
     public MessageIoDispatcher(PlayerPushRegistry playerPushRegistry, // 构造注入推送表与 dispatch 管道
-                               MessageDispatchPipeline pipeline) { // BaseServer childHandler 注入
+                               MessageDispatchPipeline pipeline,
+                               SceneCommandGateway sceneCommandGateway) { // BaseServer childHandler 注入
         // 历史构造器曾直接注入 dispatchThreadModel/factory，现已收敛到 pipeline 内部
         this.pipeline = pipeline; // Netty 与 WebSocket 共用 MessageDispatchPipeline
         this.playerPushRegistry = playerPushRegistry; // 断线解绑 playerId -> Channel 推送映射
+        this.sceneCommandGateway = sceneCommandGateway;
     } // 编译单元结束
 
     @Override // 实现接口/父类方法
@@ -45,6 +49,7 @@ public class MessageIoDispatcher extends SimpleChannelInboundHandler<GameMessage
         Long playerId = ctx.channel().attr(ChannelAttrs.PLAYER_ID).get(); // 读取 Channel 上 AuthFacade 写入的玩家 ID
         if (playerId != null && playerId > 0) { // 已选角才注册了 PlayerPushRegistry 绑定
             playerPushRegistry.unbind(playerId); // 清除 playerId -> ChannelHandlerContext 推送映射
+            sceneCommandGateway.onPlayerDisconnect(playerId);
         } // 编译单元结束
 
         super.channelInactive(ctx); // 继续 pipeline 默认断连处理，释放 Channel 资源

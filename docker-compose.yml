@@ -1,13 +1,48 @@
-# 本地开发依赖：Redis（必需）、Nacos（可选，微服务注册/配置中心）
+# 本地依赖：MySQL + Redis（必需），Nacos（可选）
 # 启动：docker compose up -d
 # 仅 Redis：docker compose up -d redis
+# 仅 MySQL：docker compose up -d mysql
+#
+# MySQL 首次初始化会创建 player_db / battle_db / activity_db / update_db / scene_db / guild_db
+# 并执行各库 schema（见 docker/mysql/ 与各服务 schema/）。
+# Nacos 默认关闭认证，仅适合本机；共享环境请开启 NACOS_AUTH_ENABLE 与 ACL。
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: mmorpg-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:123456}
+      MYSQL_DATABASE: ${MYSQL_DB_PLAYER:player_db}
+    ports:
+      - "${MYSQL_PORT:3306}:3306"
+    volumes:
+      - mmorpg-mysql-data:/var/lib/mysql
+      - ./docker/mysql/00-create-databases.sql:/docker-entrypoint-initdb.d/00-create-databases.sql:ro
+      - ./player-service/src/main/resources/schema/player_db.sql:/docker-entrypoint-initdb.d/01-player_db.sql:ro
+      - ./docker/mysql/02-battle_db.sql:/docker-entrypoint-initdb.d/02-battle_db.sql:ro
+      - ./docker/mysql/03-activity_db.sql:/docker-entrypoint-initdb.d/03-activity_db.sql:ro
+      - ./docker/mysql/04-update_db.sql:/docker-entrypoint-initdb.d/04-update_db.sql:ro
+      - ./docker/mysql/05-scene_db.sql:/docker-entrypoint-initdb.d/05-scene_db.sql:ro
+      - ./docker/mysql/06-guild_db.sql:/docker-entrypoint-initdb.d/06-guild_db.sql:ro
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_PASSWORD:123456}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: mmorpg-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
   nacos:
@@ -15,8 +50,12 @@ services:
     container_name: mmorpg-nacos
     environment:
       MODE: standalone
+      # 仅本地演示关闭认证；局域网/共享环境务必改为 true 并配置鉴权
       NACOS_AUTH_ENABLE: "false"
     ports:
       - "8848:8848"
       - "9848:9848"
     restart: unless-stopped
+
+volumes:
+  mmorpg-mysql-data:

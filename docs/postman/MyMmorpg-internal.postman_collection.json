@@ -1,0 +1,86 @@
+{
+  "info": {
+    "name": "MyMmorpg Internal APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "内部接口调试集合（需 HMAC / X-Player-Id）"
+  },
+  "item": [
+    {
+      "name": "Admin Reload",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Admin-User-Id", "value": "1" }],
+        "url": "{{adminBase}}/admin/ops/reload"
+      }
+    },
+    {
+      "name": "Config Publish",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Admin-User-Id", "value": "1" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"before\":\"{}\",\"after\":\"{\\\"id\\\":1}\"}"
+        },
+        "url": "{{adminBase}}/admin/ops/config/publish?domain=activity&gray=false&grayPercent=100"
+      }
+    },
+    {
+      "name": "Party Create",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Player-Id", "value": "1001" }],
+        "url": "{{hallBase}}/internal/hall/party/create"
+      }
+    },
+    {
+      "name": "Assist Borrow",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Player-Id", "value": "1001" }],
+        "url": "{{hallBase}}/internal/hall/assist/borrow?ownerId=1002"
+      }
+    },
+    {
+      "name": "Pass Auto Renew",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Player-Id", "value": "1001" }],
+        "url": "{{shopBase}}/internal/shop/pass/auto-renew?seasonId=1&enabled=true"
+      }
+    },
+    {
+      "name": "Chat Report",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-Player-Id", "value": "1001" }],
+        "url": "{{chatBase}}/internal/chat/report?targetPlayerId=1002&channel=2&reason=spam"
+      }
+    },
+    {
+      "name": "NPC Dialogue",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Player-Id", "value": "1001" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"npcId\":\"guide\",\"message\":\"有什么任务线索？\"}"
+        },
+        "url": "{{sceneBase}}/internal/npc/dialogue"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "adminBase", "value": "http://127.0.0.1:8985" },
+    { "key": "hallBase", "value": "http://127.0.0.1:8986" },
+    { "key": "shopBase", "value": "http://127.0.0.1:8990" },
+    { "key": "chatBase", "value": "http://127.0.0.1:8982" },
+    { "key": "sceneBase", "value": "http://127.0.0.1:8981" }
+  ]
+}

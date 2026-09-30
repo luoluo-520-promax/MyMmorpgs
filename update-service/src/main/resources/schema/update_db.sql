@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS client_version_release (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    version_code VARCHAR(32) NOT NULL UNIQUE,
+    version_number BIGINT NOT NULL,
+    min_client_version_number BIGINT NOT NULL DEFAULT 0,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    manifest TEXT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

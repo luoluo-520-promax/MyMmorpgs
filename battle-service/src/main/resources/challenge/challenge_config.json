@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "name": "深渊·初试",
+    "challengeType": 1,
+    "waveCount": 1,
+    "waves": [
+      { "monsterTemplateId": 1, "levelBonus": 0, "hpMul": 1.0, "atkMul": 1.0 }
+    ],
+    "starThresholdsSec": [60, 120, 180],
+    "description": "单波演示关"
+  },
+  {
+    "id": 2,
+    "name": "深渊·进阶",
+    "challengeType": 1,
+    "waveCount": 2,
+    "waves": [
+      { "monsterTemplateId": 1, "levelBonus": 2, "hpMul": 1.2, "atkMul": 1.1 },
+      { "monsterTemplateId": 2, "levelBonus": 4, "hpMul": 1.5, "atkMul": 1.2 }
+    ],
+    "starThresholdsSec": [90, 150, 240],
+    "description": "双波配置化关卡"
+  },
+  {
+    "id": 7,
+    "name": "深渊·七层",
+    "challengeType": 1,
+    "waveCount": 3,
+    "waves": [
+      { "monsterTemplateId": 1, "levelBonus": 5, "hpMul": 1.3, "atkMul": 1.2 },
+      { "monsterTemplateId": 2, "levelBonus": 8, "hpMul": 1.6, "atkMul": 1.3 },
+      { "monsterTemplateId": 3, "levelBonus": 10, "hpMul": 2.0, "atkMul": 1.5 }
+    ],
+    "starThresholdsSec": [60, 120, 180],
+    "description": "与既有 challengeId=7 测试对齐"
+  }
+]

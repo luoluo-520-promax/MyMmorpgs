@@ -17,4 +17,18 @@ public class NoOpPlayerProgressPort implements PlayerProgressPort {
                 player == null ? null : player.getId(), expReward);
         return player;
     }
+
+    @Override
+    public Player spendGold(Player player, long amount) {
+        log.debug("PlayerProgressPort 未实现，跳过扣金币 playerId={} amount={}",
+                player == null ? null : player.getId(), amount);
+        return player;
+    }
+
+    @Override
+    public Player addGold(Player player, long amount) {
+        log.debug("PlayerProgressPort 未实现，跳过加金币 playerId={} amount={}",
+                player == null ? null : player.getId(), amount);
+        return player;
+    }
 }

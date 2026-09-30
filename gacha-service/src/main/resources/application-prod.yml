@@ -1,0 +1,3 @@
+game:
+  internal-api:
+    enabled: true

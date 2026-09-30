@@ -51,7 +51,17 @@ public final class MmorpgCliApplication {
             case "chat" -> CliCommands.runChat(rest);
             case "scene" -> CliCommands.runScene(rest);
             case "flow" -> CliCommands.runFlow(rest);
+            case "import" -> CliImportCommands.runImport(rest);
+            case "ai" -> CliAiCommands.runAi(rest);
             case "selftest" -> CliCommands.runSelfTest();
+            case "connect" -> {
+                try {
+                    yield ServerConnector.connect(CliArgs.parse(rest));
+                } catch (Exception e) {
+                    System.err.println("连接失败: " + e.getMessage());
+                    yield 1;
+                }
+            }
             default -> {
                 System.err.println("未知命令: " + command);
                 printHelp();
@@ -95,6 +105,39 @@ public final class MmorpgCliApplication {
                     --map-id <n>                地图 ID（默认 1）
                     --player-id <n>             玩家 ID（默认 42）
                   flow                          模拟完整业务流程（9 阶段）
+                  import activity               导入活动配置（JSON/CSV）
+                    --file <path>               配置文件路径
+                    --admin-user-id <id>        后台用户 ID
+                    --format json|csv           文件格式（默认 json）
+                    --admin-url <url>           admin-service 地址
+                    --secret <hmac>             HMAC 密钥（或使用 --api-key）
+                    --api-key <key>             API Key（或使用 --secret）
+                  import manifest               导入版本清单 JSON
+                    --file <path>               配置文件路径
+                    --admin-user-id <id>        后台用户 ID
+                  ai activity-draft             AI 生成活动 JSON 草案（dry-run）
+                    --prompt <text>             自然语言需求
+                    --template checkin|recharge|shop
+                    --admin-user-id <id>        后台用户 ID
+                    --out <path>                可选，保存完整响应
+                  ai activity-apply             使用 draft 返回的 confirmToken 正式导入
+                    --confirm-token <token>
+                    --admin-user-id <id>
+                  ai complaint-suggest          投诉归类与话术建议（只读）
+                    --complaint-id <id> | --content <text>
+                  ai battle-report              战斗数值周报（进程统计快照）
+                    --focus <text>              可选关注点
+                    --out <path>                可选保存响应
+                  ai flow-suggest               生成本地回归 CLI 命令序列
+                    --scenario smoke|balance|complaint|activity
+                  ai player-advise               玩家顾问：当前角色 + 全服胜率/技能使用率
+                    --player-id <id> --question <text> --token <loginToken>
+                    --topic BATTLE|BUILD|QUEST
+                    --player-url http://127.0.0.1:8989
+                  connect                       连接真实服务器并登录（WebSocket）
+                    --url ws://host:8989/ws/player  服务地址（默认本地）
+                    --account testuser            登录账号
+                    --password 123456             登录密码
                     --name full                 全流程（默认，battle 为别名）
                     --account testuser          登录账号（默认 testuser）
                     --password 123456           登录密码

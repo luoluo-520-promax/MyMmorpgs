@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package mmorpg.battle;
+
+option java_multiple_files = true;
+option java_package = "cn.itcast.demo.mymmorpg.protocol.protobuf";
+option java_outer_classname = "BattleProtocolProto";
+
+// ---------- 公共结构 ----------
+
+message BuffInfo {
+  uint32 buff_id = 1;
+  uint32 remaining_time = 2;
+  uint32 stack_count = 3;
+}
+
+message BattleEntityInfo {
+  uint64 entity_id = 1;
+  string name = 2;
+  uint32 level = 3;
+  uint32 hp = 4;
+  uint32 hp_max = 5;
+  uint32 mp = 6;
+  uint32 mp_max = 7;
+  uint32 attack = 8;
+  uint32 defense = 9;
+  repeated BuffInfo buffs = 10;
+}
+
+// ---------- 201 / 202 开始战斗 ----------
+
+message BattleStartCsReq {
+  uint32 enemy_id = 1;
+  uint32 lineup_id = 2;
+  uint32 battle_type = 3;
+  // 场景实体 ID（与 enemy_id 同义时可省略；遭遇转场时优先使用）
+  uint64 scene_entity_id = 4;
+  repeated uint64 lineup_unit_ids = 5;
+}
+
+message BattleStartScRsp {
+  int32 retcode = 1;
+  uint64 battle_id = 2;
+  BattleEntityInfo enemy_info = 3;
+  BattleEntityInfo player_info = 4;
+  uint32 scene_id = 5;
+  uint64 server_time = 6;
+  // 编队展开后的多单位（player_info 仍为队长，兼容旧客户端）
+  repeated BattleEntityInfo player_units = 7;
+  repeated BattleEntityInfo enemy_units = 8;
+  TurnInfo turn_info = 9;
+  uint64 scene_entity_id = 10;
+  float return_pos_x = 11;
+  float return_pos_y = 12;
+  float return_pos_z = 13;
+}
+
+// ---------- 203 / 204 战斗动作 ----------
+
+message BattleActionCsReq {
+  uint64 battle_id = 1;
+  uint32 action_type = 2;
+  uint32 skill_id = 3;
+  uint32 item_id = 4;
+  uint64 target_entity_id = 5;
+  uint64 timestamp = 6;
+  // 元素附着类型：0无 1火 2水 3雷 4冰 5风 6岩 7草（客户端预测用）
+  uint32 element_type = 7;
+  // 客户端本地预测伤害，服务端回滚校验时对比
+  uint32 client_predicted_damage = 8;
+  // 客户端预测反应类型编码（0=无反应）
+  uint32 client_predicted_reaction = 9;
+}
+
+message EffectInfo {
+  uint32 effect_type = 1;
+  uint64 target_entity_id = 2;
+  uint32 buff_id = 3;
+  uint32 attr_type = 4;
+  uint32 new_value = 5;
+}
+
+message BattleActionScRsp {
+  int32 retcode = 1;
+  uint64 battle_id = 2;
+  uint64 action_id = 3;
+  uint32 damage = 4;
+  uint32 heal = 5;
+  repeated EffectInfo effects = 6;
+  // 服务端裁定的元素反应类型（0=无）
+  uint32 reaction_type = 7;
+  // 目标当前残留附着元素（0=无）
+  uint32 aura_element = 8;
+  // true=客户端预测与服务器不一致，客户端应回滚到本包权威状态
+  bool rollback = 9;
+  // 反应倍率后的最终伤害（与 damage 一致，便于客户端对照预测）
+  uint32 final_damage = 10;
+}
+
+// ---------- 205 战斗状态同步通知 ----------
+
+message EntityUpdate {
+  uint64 entity_id = 1;
+  uint32 hp = 2;
+  uint32 mp = 3;
+  uint32 attack = 4;
+  uint32 defense = 5;
+  uint32 level = 6;
+}
+
+message BuffUpdate {
+  uint64 entity_id = 1;
+  uint32 buff_id = 2;
+  uint32 action = 3;
+  uint32 remaining_time = 4;
+  uint32 stack_count = 5;
+}
+
+message TurnInfo {
+  uint64 current_actor_id = 1;
+  uint32 turn_number = 2;
+  uint32 time_limit = 3;
+}
+
+message BattleSyncScNotify {
+  uint64 battle_id = 1;
+  uint32 sync_type = 2;
+  repeated EntityUpdate entity_updates = 3;
+  repeated BuffUpdate buff_updates = 4;
+  TurnInfo turn_info = 5;
+}
+
+// ---------- 206 / 207 战斗结束 ----------
+
+message BattleEndCsReq {
+  uint64 battle_id = 1;
+  uint32 result = 2;
+  uint32 duration = 3;
+  uint32 damage_dealt = 4;
+  uint32 damage_taken = 5;
+}
+
+message ItemReward {
+  uint32 item_id = 1;
+  uint32 count = 2;
+}
+
+message BattleEndScRsp {
+  int32 retcode = 1;
+  uint64 battle_id = 2;
+  uint32 player_exp = 3;
+  map<uint32, uint32> currency_rewards = 4;
+  repeated ItemReward item_rewards = 5;
+}

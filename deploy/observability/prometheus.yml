@@ -1,0 +1,32 @@
+# Prometheus scrape + Alertmanager 告警骨架（P0）
+# 用法示例：
+#   prometheus --config.file=deploy/observability/prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: player-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8989"]
+  - job_name: shop-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8990"]
+  - job_name: bag-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8983"]
+  - job_name: activity-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8992"]
+  - job_name: mmorpg-gateway
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8443"]

@@ -4,6 +4,7 @@
  */
 package cn.itcast.demo.mymmorpg.web;
 
+import cn.itcast.demo.mymmorpg.observability.TraceContext;
 import jakarta.servlet.FilterChain; // Servlet 过滤器链，继续执行后续 Filter 与 Controller
 
 import jakarta.servlet.ServletException; // Filter 链执行可能抛出的 Servlet 异常
@@ -11,8 +12,6 @@ import jakarta.servlet.ServletException; // Filter 链执行可能抛出的 Serv
 import jakarta.servlet.http.HttpServletRequest; // 读取请求头 X-Trace-Id
 
 import jakarta.servlet.http.HttpServletResponse; // 向响应头写回 traceId
-
-import org.slf4j.MDC; // Mapped Diagnostic Context，线程级键值，日志 pattern 可输出 %X{traceId}
 
 import org.springframework.lang.NonNull; // 标记参数非空，消除静态分析警告
 
@@ -26,6 +25,7 @@ import java.util.UUID; // 本机生成唯一 traceId
 
 /**
  * 在 Controller 执行前注入 traceId，请求结束后清理 MDC，防止线程池复用导致 traceId 串线。
+ * MDC 读写统一经 {@link TraceContext}，便于异步/MQ 跨线程传播。
  */
 @Component // Spring Boot 自动注册此 Filter
 public class TraceIdFilter extends OncePerRequestFilter {
@@ -43,12 +43,12 @@ public class TraceIdFilter extends OncePerRequestFilter {
         if (traceId == null || traceId.isBlank()) { // 无上游 traceId 时本机生成
             traceId = UUID.randomUUID().toString().replace("-", ""); // 32 位十六进制，去掉 UUID 中的横线便于日志检索
         }
-        MDC.put(TRACE_ID, traceId); // 写入当前线程 MDC，本请求后续所有 log.info/warn/error 自动带上 traceId
+        TraceContext.setTraceId(traceId); // 写入当前线程 MDC，本请求后续所有 log.info/warn/error 自动带上 traceId
         response.setHeader(TRACE_HEADER, traceId); // 响应头回传 traceId，客户端出错时可报给客服/运维查日志
         try { // 确保无论 Controller 成功或抛异常，finally 都能清理 MDC
             filterChain.doFilter(request, response); // 继续执行后续 Filter 与 Controller 业务逻辑
         } finally { // 请求处理完毕（含异常路径）必定执行
-            MDC.remove(TRACE_ID); // 移除 MDC 键，避免 Tomcat 线程归还池后被下一个无关请求复用同一 traceId
+            TraceContext.clear(); // 移除 MDC 键，避免 Tomcat 线程归还池后被下一个无关请求复用同一 traceId
         }
     }
 }

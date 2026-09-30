@@ -12,12 +12,14 @@ import org.springframework.context.annotation.Configuration; // 声明配置类
 @ConditionalOnProperty(name = "spring.application.name", havingValue = "skill-service") // 与 SkillServiceApplication 同条件，player-service 聚合部署时不加载
 public class SkillPortConfiguration { // 为 skill-service 独立部署提供 PlayerNotificationPort / PlayerDataLoadPort 占位实现
 
-    @Bean // 注册 PlayerNotificationPort；player-service 会用 WebSocket 真实实现覆盖
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerNotificationPort playerNotificationPort() { // 工厂方法：返回不推送消息的通知端口
         return new NoOpPlayerNotificationPort(); // 独立 skill-service 施法后 CD/Learn notify 不会下发客户端
     }
 
-    @Bean // 注册 PlayerDataLoadPort
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerDataLoadPort playerDataLoadPort() { // 工厂方法：返回不跟踪预加载状态的端口
         return new NoOpPlayerDataLoadPort(); // isReady 恒 true，handleGetPlayerSkills 不会返回 loading=true 占位
     }

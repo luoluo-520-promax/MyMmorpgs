@@ -8,6 +8,7 @@
  */
 package cn.itcast.demo.mymmorpg.service; // 选角后异步预加载背包/技能/活动，可选推送 DataReady 通知到客户端
 
+import cn.itcast.demo.mymmorpg.port.BagCommandPort;
 import cn.itcast.demo.mymmorpg.port.PlayerDataLoadPort;
 import cn.itcast.demo.mymmorpg.port.PlayerDataPreloadPort;
 import cn.itcast.demo.mymmorpg.protocol.MessageId; // BAG/SKILL/ACTIVITY_DATA_READY_SC_NOTIFY 消息号
@@ -20,6 +21,7 @@ import cn.itcast.demo.mymmorpg.protocol.protobuf.GetPlayerSkillsScRsp; // 复用
 import cn.itcast.demo.mymmorpg.protocol.protobuf.SkillDataReadyScNotify; // 技能预加载完成推送
 import org.slf4j.Logger; // 预加载失败 warn 日志
 import org.slf4j.LoggerFactory; // Logger 工厂
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value; // game.player-preload.* 配置注入
 import org.springframework.stereotype.Service; // 声明业务 Bean，选角 Handler 调用 onPlayerSelected 触发预加载
 
@@ -37,14 +39,9 @@ public class PlayerDataAsyncPreloadService implements PlayerDataPreloadPort {
     /** 加载状态与 tryStart 去重，防止重复提交异步任务 */
     private final PlayerDataLoadStateService stateService; // 加载状态与 tryStart 去重，防止重复提交异步任务
 
-    /** 背包业务，loadBagNow 强制查库/缓存并返回 GetBagInfoScRsp */
-    private final BagService bagService; // 背包业务，loadBagNow 强制查库/缓存并返回 GetBagInfoScRsp
-
-    /** 技能业务，loadSkillsNow 查 player_skill + skill_config */
-    private final SkillService skillService; // 技能业务，loadSkillsNow 查 player_skill + skill_config
-
-    /** 活动业务，loadActivityListNow 查活动配置与玩家进度 */
-    private final ActivityService activityService; // 活动业务，loadActivityListNow 查活动配置与玩家进度
+    private final ObjectProvider<BagCommandPort> bagCommandPort;
+    private final ObjectProvider<SkillService> skillService;
+    private final ObjectProvider<ActivityService> activityService;
 
     /** 下行推送，将 DataReady Notify 经 Netty/WS 发给在线客户端 */
     private final PlayerPushRegistry playerPushRegistry; // 下行推送，将 DataReady Notify 经 Netty/WS 发给在线客户端
@@ -61,23 +58,23 @@ public class PlayerDataAsyncPreloadService implements PlayerDataPreloadPort {
     /**
      * 构造器：状态服务、三类业务服务、推送注册表与预加载配置。
      */
-    public PlayerDataAsyncPreloadService( // 构造器：状态服务、三类业务服务、推送注册表与预加载配置
-            PlayerDataLoadStateService stateService, // ready/loading 门控与 dedupe
-            BagService bagService, // loadBagNow 查背包
-            SkillService skillService, // loadSkillsNow 查技能
-            ActivityService activityService, // loadActivityListNow 查活动
-            PlayerPushRegistry playerPushRegistry, // DataReady Notify 下行
-            @Value("${game.player-preload.enabled:false}") boolean enabled, // 选角后是否后台预加载 BAG/SKILL/ACTIVITY
-            @Value("${game.player-preload.push-enabled:true}") boolean pushEnabled, // 预加载完成后是否主动推送 *DataReadyScNotify
-            @Value("${game.player-preload.dedupe-window-ms:2000}") long dedupeWindowMs) { // tryStart 去重窗口毫秒，防连点重复提交
-        this.stateService = stateService; // tryStart/markReady/markFailed
-        this.bagService = bagService; // preloadBag 数据源
-        this.skillService = skillService; // preloadSkill 数据源
-        this.activityService = activityService; // preloadActivity 数据源
-        this.playerPushRegistry = playerPushRegistry; // BAG/SKILL/ACTIVITY_DATA_READY 推送
-        this.enabled = enabled; // false 时 trigger 短路
-        this.pushEnabled = pushEnabled; // false 时仅 markReady 不推送
-        this.dedupeWindowMs = dedupeWindowMs; // dedupe 窗口传给 tryStart
+    public PlayerDataAsyncPreloadService(
+            PlayerDataLoadStateService stateService,
+            ObjectProvider<BagCommandPort> bagCommandPort,
+            ObjectProvider<SkillService> skillService,
+            ObjectProvider<ActivityService> activityService,
+            PlayerPushRegistry playerPushRegistry,
+            @Value("${game.player-preload.enabled:false}") boolean enabled,
+            @Value("${game.player-preload.push-enabled:true}") boolean pushEnabled,
+            @Value("${game.player-preload.dedupe-window-ms:2000}") long dedupeWindowMs) {
+        this.stateService = stateService;
+        this.bagCommandPort = bagCommandPort;
+        this.skillService = skillService;
+        this.activityService = activityService;
+        this.playerPushRegistry = playerPushRegistry;
+        this.enabled = enabled;
+        this.pushEnabled = pushEnabled;
+        this.dedupeWindowMs = dedupeWindowMs;
     }
 
     /**
@@ -145,50 +142,56 @@ public class PlayerDataAsyncPreloadService implements PlayerDataPreloadPort {
     /**
      * 预加载背包：loadBagNow 查库，可选推送 BAG_DATA_READY_SC_NOTIFY。
      */
-    private void preloadBag(long playerId) throws Exception { // 预加载背包：loadBagNow 查库，可选推送 BAG_DATA_READY_SC_NOTIFY
-        ProtocolMessage message = bagService.loadBagNow(playerId); // 强制查库/缓存
-        if (!pushEnabled) { // 不主动推送
-            return; // 仅 markReady，客户端自行 GetBagInfo
+    private void preloadBag(long playerId) throws Exception {
+        BagCommandPort bag = bagCommandPort.getIfAvailable();
+        if (bag == null) {
+            throw new IllegalStateException("BagCommandPort unavailable for preload");
         }
-        GetBagInfoScRsp rsp = GetBagInfoScRsp.parseFrom(message.payload()); // 解码 GetBagInfoScRsp
-        byte[] payload = BagDataReadyScNotify.newBuilder() // 预加载背包：loadBagNow 查库，可选推送 BAG_DATA_READY_SC_NOTIFY
-                .setCapacity(rsp.getCapacity()) // 背包容量
-                .setUsedSlots(rsp.getUsedSlots()) // 已用格数
-                .addAllItems(rsp.getItemsList()) // 道具列表
-                .build() // 完成 BagDataReadyScNotify Protobuf
-                .toByteArray(); // DataReady Notify 无 retcode
-        playerPushRegistry.send(playerId, MessageId.BAG_DATA_READY_SC_NOTIFY, payload); // 主动推送背包 UI 数据
+        ProtocolMessage message = bag.loadBagNow(playerId);
+        if (!pushEnabled) {
+            return;
+        }
+        GetBagInfoScRsp rsp = GetBagInfoScRsp.parseFrom(message.payload());
+        byte[] payload = BagDataReadyScNotify.newBuilder()
+                .setCapacity(rsp.getCapacity())
+                .setUsedSlots(rsp.getUsedSlots())
+                .addAllItems(rsp.getItemsList())
+                .build()
+                .toByteArray();
+        playerPushRegistry.send(playerId, MessageId.BAG_DATA_READY_SC_NOTIFY, payload);
     }
 
-    /**
-     * 预加载技能列表：loadSkillsNow 查 player_skill，可选推送 SKILL_DATA_READY_SC_NOTIFY。
-     */
-    private void preloadSkill(long playerId) throws Exception { // 预加载技能列表：loadSkillsNow 查 player_skill，可选推送 SKILL_DATA_READY_SC_NOTIFY
-        ProtocolMessage message = skillService.loadSkillsNow(playerId); // 查 player_skill + skill_config
-        if (!pushEnabled) { // 不主动推送
-            return; // 仅 markReady
+    private void preloadSkill(long playerId) throws Exception {
+        SkillService skill = skillService.getIfAvailable();
+        if (skill == null) {
+            throw new IllegalStateException("SkillService unavailable for preload");
         }
-        GetPlayerSkillsScRsp rsp = GetPlayerSkillsScRsp.parseFrom(message.payload()); // 解码技能列表 ScRsp
-        byte[] payload = SkillDataReadyScNotify.newBuilder() // 预加载技能列表：loadSkillsNow 查 player_skill，可选推送 SKILL_DATA_READY_SC_NOTIFY
-                .addAllSkills(rsp.getSkillsList()) // 已学技能列表
-                .build() // 完成 SkillDataReadyScNotify Protobuf
-                .toByteArray(); // 预加载技能列表：loadSkillsNow 查 player_skill，可选推送 SKILL_DATA_READY_SC_NOTIFY
-        playerPushRegistry.send(playerId, MessageId.SKILL_DATA_READY_SC_NOTIFY, payload); // 主动推送技能 UI 数据
+        ProtocolMessage message = skill.loadSkillsNow(playerId);
+        if (!pushEnabled) {
+            return;
+        }
+        GetPlayerSkillsScRsp rsp = GetPlayerSkillsScRsp.parseFrom(message.payload());
+        byte[] payload = SkillDataReadyScNotify.newBuilder()
+                .addAllSkills(rsp.getSkillsList())
+                .build()
+                .toByteArray();
+        playerPushRegistry.send(playerId, MessageId.SKILL_DATA_READY_SC_NOTIFY, payload);
     }
 
-    /**
-     * 预加载活动列表：loadActivityListNow 查配置与进度，可选推送 ACTIVITY_DATA_READY_SC_NOTIFY。
-     */
-    private void preloadActivity(long playerId) throws Exception { // 预加载活动列表：loadActivityListNow 查配置与进度，可选推送 ACTIVITY_DATA_READY_SC_NOTIFY
-        ProtocolMessage message = activityService.loadActivityListNow(playerId); // 查活动配置与玩家进度
-        if (!pushEnabled) { // 不主动推送
-            return; // 仅 markReady
+    private void preloadActivity(long playerId) throws Exception {
+        ActivityService activity = activityService.getIfAvailable();
+        if (activity == null) {
+            throw new IllegalStateException("ActivityService unavailable for preload");
         }
-        GetActivityListScRsp rsp = GetActivityListScRsp.parseFrom(message.payload()); // 解码活动列表 ScRsp
-        byte[] payload = ActivityDataReadyScNotify.newBuilder() // 预加载活动列表：loadActivityListNow 查配置与进度，可选推送 ACTIVITY_DATA_READY_SC_NOTIFY
-                .addAllActivities(rsp.getActivitiesList()) // 进行中活动列表
-                .build() // 完成 ActivityDataReadyScNotify Protobuf
-                .toByteArray(); // 预加载活动列表：loadActivityListNow 查配置与进度，可选推送 ACTIVITY_DATA_READY_SC_NOTIFY
-        playerPushRegistry.send(playerId, MessageId.ACTIVITY_DATA_READY_SC_NOTIFY, payload); // 主动推送活动 UI 数据
+        ProtocolMessage message = activity.loadActivityListNow(playerId);
+        if (!pushEnabled) {
+            return;
+        }
+        GetActivityListScRsp rsp = GetActivityListScRsp.parseFrom(message.payload());
+        byte[] payload = ActivityDataReadyScNotify.newBuilder()
+                .addAllActivities(rsp.getActivitiesList())
+                .build()
+                .toByteArray();
+        playerPushRegistry.send(playerId, MessageId.ACTIVITY_DATA_READY_SC_NOTIFY, payload);
     }
 }

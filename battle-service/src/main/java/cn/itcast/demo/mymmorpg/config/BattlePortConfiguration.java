@@ -24,16 +24,19 @@ import org.springframework.context.annotation.Configuration;
 public class BattlePortConfiguration {
 
     @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerNotificationPort playerNotificationPort() {
         return new NoOpPlayerNotificationPort();
     }
 
     @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     BattleScenePort battleScenePort() {
         return new NoOpBattleScenePort();
     }
 
     @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerProgressPort playerProgressPort() {
         return new NoOpPlayerProgressPort();
     }

@@ -5,7 +5,7 @@
  * 3) 主要职责：玩家服务全上下文集成测试（H2、Redis、Feign 占位 URL、Actuator）? * 4) 变更建议：与 activity/battle ?ApplicationIT 保持 properties 结构一致? * 5) 风险提示：Feign URL 为占位端口，IT 不发起真实远程调用? */
 package cn.itcast.demo.mymmorpg.integration;
 import cn.itcast.demo.mymmorpg.MyMmorpgApplication; // 玩家服务主类
-import cn.itcast.demo.mymmorpg.integration.support.RedisTestContainerHolder; // 测试 Redis
+import cn.itcast.demo.mymmorpg.test.support.RedisTestContainerHolder;
 import org.springframework.beans.factory.annotation.Autowired; // 自动注入依赖
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -29,17 +29,23 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.datasource.username=sa",
                 "spring.datasource.password=",
                 "spring.jpa.hibernate.ddl-auto=create-drop",
+                "spring.flyway.enabled=false",
                 "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
                 "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
                 "server.ssl.enabled=false", // 不测 HTTPS
                 "server.port=0", // ?RANDOM_PORT 配合
                 "game.netty.port=0", // 不测 Netty 游戏端口
+                "game.netty.enabled=false",
+                "game.kcp.enabled=false",
                 "rocketmq.enabled=false",
                 "spring.cloud.openfeign.client.config.battle-service.url=http://127.0.0.1:8991", // Feign 占位，避免连真实 battle
                 "spring.cloud.openfeign.client.config.activity-service.url=http://127.0.0.1:8992", // Feign 占位
                 "game.data-warmup.enabled=false",
                 "game.player-preload.enabled=false",
-                "game.idempotency.enabled=false"
+                "game.idempotency.enabled=false",
+                "spring.profiles.active=test",
+                "game.http-security.enabled=false",
+                "game.internal-api.secret=test-internal-secret"
         })
 public class PlayerServiceApplicationIT extends AbstractTestNGSpringContextTests { // 玩家服务集成测试
 

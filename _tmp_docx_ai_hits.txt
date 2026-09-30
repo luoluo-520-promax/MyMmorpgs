@@ -1,0 +1,62 @@
+5|Normal|生成日期：2026年08月24日（P14 + AI 平台 ai-service 集成；P13 体验优化；P12 性能加固）
+6|Normal|修订说明：在原有 P6–P12（含性能加固 Actor 信箱/对象池/AOI 增量等）基础上，新增 P13 体验优化（探索罗盘/地图标记/世界影响、区域特色移动/攀爬歇脚/通用探索套件、生态叙事/环境叙事/探索正向反馈、战斗辅助模式、资源自动化/灵活日常/智能养成），并增补 P14 体验纵深补齐（客户端预测与软回滚、立体移动动量继承、确定性破坏、探索活力/神瞳共鸣、野外营地/幻影借用/助战印记、多端辅助与连招宏、周词缀轮换/命运残响）；
+33|toc 2|3.7 AI 辅助面	23
+51|toc 3|5.2.8 P10 活物生态 / 立体动作融合 / 地貌元素连锁 / 服务器纪元 / 野外攻城与不对称 / 制造交易 / 命中手感 / 集群 AI	33
+52|Normal|5.3.1 AI 推理平台（ai-service + AiPlatformFacade）
+模块：ai-service（8995）+ mmorpg-common/ai/*。单体嵌入 player-service（game.ai.remote=false）；微服务 Feign AiPlatformClient + Gateway Path=/internal/ai/**。
+核心 API：POST /internal/ai/infer · /
+53|toc 2|5.3 战斗域与 AI	41
+58|toc 2|5.8 匹配系统	43
+73|toc 1|第八章 环境变量与配置矩阵（精要）	46
+133|List Bullet|对齐二游常见体验：元素反应、体力、装备随机词条与定向锁定、命座改机制、战令/月卡、签到、联机房间、智能 NPC 与 Boss 行为树、公会（组织/科技/远征）、深渊（半月重置高难连打）、下落重击/水下领域、稀有精英偶遇、家园偷菜博弈、韧性处决、区域全收集觉醒等、野生亲密度养成、钩锁拉拽/载具战斗、地貌感电与冰封、全服纪元抉择、野外协同攻城、躲猫猫/竞速、制造与摆摊交易、HitStop 命中反馈、小队协同 AI，以及队伍元素共鸣、角色传说
+143|Normal|ai-service
+144|Normal|统一 AI 推理平台：推荐/客服/NPC 长期记忆/内容校验/流失干预/MLOps（8995）
+149|List Bullet|市政厅（管理后台）：配置导入、投诉、热更、AI 草稿。
+174|List Bullet|移动延迟补偿（SnapshotBuffer，已迁至 mmorpg-common）与客户端预测校验；P14 扩展 ServerShadowService + ClientPredictedActionService 软回滚（MOVE/DASH/技能位移差异化阈值）。
+177|List Bullet|【P7 动作感与世界纵深】瞬时博弈 ReactionValidator（完美闪避/弹反，服务端窗口 dodgeWindowMs 校验）+ BulletTimeService 时空断裂（0.1x / 1.5s，暂停非攻击者 NPC tick）+ 闪避计入结算掉落权重；MovementType 增补 GRAPPLE/RIDE/AIR_DASH/WALL_RUN，MoveFlags 位掩码（MID_AIR_DASH/WALL_RUN），Gra
+179|List Bullet|【P10 活物生态 / 动作融合 / 地貌连锁 / 纪元势力 / 野外攻城 / 制造交易 / 命中手感 / 集群 AI】EcosystemBehaviorService（FEED/PATROL/FLEE/SLEEP/MIGRATE，5s Tick，非战斗优先生态 AI）+ AffinityService（Redis 语义 creature:affinity:，喂食 FOOD_ITEM，寻宝/预警 MsgId 2200）+ EcoCarr
+180|List Bullet|【P14 体验纵深补齐 + 七大短板加固】ClientPredictedActionService + ServerShadowService（500ms 影子快照）+ ReactionValidator.dynamicDodgeWindowMs（Base+RTT×0.5）+ PrePlaybackService 软回滚；SceneMoveCmd.inheritedVelocity + TraverseMomentumService 动
+212|List Bullet|仍预留/未完全产品化：装备套装共鸣完整匹配（suit_id 字段仍在）、fishing_spot/cooking_recipe（钓鱼 QTE）、world_incident_template（奇遇池）、个人名片 player:profile——schema 或字段已定稿，部分玩法链未接完。命座机制挂载与圣遗物定向锁定已在 P9 落地（见 3.2.5 / 5.2.7）。 P10 生态/钩锁载具战斗/地貌改写/纪元拉锯/攻城非对称/制造交易
+225|List Bullet|地貌元素连锁：水池 OVERLOAD→全池 ELECTRO_CHARGED_ZONE（10s，5 码传导）；湿度>60% 时 FREEZE→ICE_TERRAIN（30s，走速×0.7/滑行×1.3，可承重压板）；风系 SWIRL 偏转敌方弹道 60°～120° 并广播元素残留条。
+231|List Bullet|集群与环境 AI：队长可下发齐射/盾墙（格挡+60%）覆盖队员个体 BT；队长死亡队员 BERSERK（攻+30%/防-50%）；AI 独占拾取可投掷环境物造成百分比伤害与击退。
+241|List Bullet|AI 队友指挥 + Boss 行为树（狂暴/转阶段/锁仇恨）；实时战斗禁止依赖 LLM。
+248|Normal|探索改变世界：ExplorationWorldImpactService 按阈值解锁路径、变更 NPC 对话、触发区域事件。
+255|Heading 3|3.2.9 体验纵深补齐（P14）
+264|List Bullet|测试：OpenWorldP14FlowTest、OpenWorldP14EdgeCaseTest（common）；OpenWorldP14BusinessFlowTest（scene Internal API 全链路）；OpenWorldFeelEnhancementFlowTest（common 七大短板单元流）；OpenWorldFeelEnhancementBusinessFlowTest（scene API 端到端）；Equip
+289|Heading 2|3.7 AI 辅助面（AI 平台已集成）
+AI 是「参谋」不是「裁判」，分两条物理隔离管道：管道 A（战斗 Tick）仅用规则/行为树/DDA，禁止 LLM；管道 B（交互/运营）走 ai-service 或 player-service 内嵌 AiPlatformFacade，超时/熔断后回退 rule-coach。
+玩家侧：POST /api/player/ai/advise（个性化顾问，含推荐）· /recommend · /su
+290|Normal|AI 是「参谋」不是「裁判」。玩家顾问默认 rule-coach，LLM 关闭时回退规则；智能 NPC 可带短期记忆/情绪，超时回退规则；Admin 可生成活动/商城/任务草案与投诉分类、战斗周报。真正改数值、发道具仍走正式业务链路。
+320|Normal|Scene 定时 tick（game.world.tick-ms）除 NPC/天气外，会调用 gameplay.tickGameplay 推进区域潮汐衰退。GM 命令 puzzle_instantiate、region_enter_chaos、config_reload_cells 已注册。完整对照与测试类见 docs/open-world-top-tier.md（P5～P7 章节）、OpenWorldP5EnhancementFlow
+332|Heading 3|5.2.8 P10 活物生态 / 立体动作融合 / 地貌元素连锁 / 服务器纪元 / 野外攻城与不对称 / 制造交易 / 命中手感 / 集群 AI
+334|Heading 2|5.3 战斗域与 AI
+341|List Bullet|Tick：GameplayTickSlicer 20 片分帧（budget 5ms）；生态 AI 异步 runAsyncFireAndForget，不阻塞主场景线程。
+346|Normal|完整对照与测试见 docs/open-world-top-tier.md（P11 章节）、OpenWorldP11FlowTest、OpenWorldP11EdgeCaseTest、OpenWorldP11BusinessFlowTest（mmorpg-common 门面 + scene-service Internal API）。门面仍为 OpenWorldGameplayFacade；场景入口 InternalOpenWorldCo
+348|Normal|战斗负责开战、行动、结算，并发布 BattleEnded 等事件供活动/任务订阅。状态常在 Redis；活跃战斗用 SET 索引，避免 KEYS 全库扫描。元素反应（含 GaugeUnit 与精通倍率、残留）、客户端预测与 rollback、Boss BT 调试接口与 ThreatTable 仇恨表均已落地。红线：实时战斗不引入 LLM。 另扩展深渊包 cn.itcast.demo.mymmorpg.abyss：InternalAbys
+357|Heading 3|5.2.12 P14 体验纵深补齐（手感延迟 / 立体惯性 / 破坏反馈 / 探索惊喜 / 社交沉淀 / 多端适配 / 终局变量 / 七大短板加固）
+358|Normal|代码详见 docs/open-world-top-tier.md P14 节；门面 OpenWorldGameplayFacade；GET /gameplay/status 返回 p14 快照（clientPredict、serverShadowWindowMs、weeklyAffixCount、trajectoryWindow、dotExitBufferMs、regionHeatWindowMs、enhancePityThreshol
+366|List Bullet|测试：OpenWorldP14FlowTest / OpenWorldP14EdgeCaseTest（common）；OpenWorldP14BusinessFlowTest（scene）；OpenWorldFeelEnhancementFlowTest / OpenWorldFeelEnhancementBusinessFlowTest；EquipEnhancePityTest；LagCompensationFlowTest / Sn
+376|Heading 2|5.8 匹配系统
+379|Normal|Admin：配置导入、投诉、操作日志、AI 草稿、分阶段 reload（activity→update→quest→player）、发布审计、配置 Diff/回滚/灰度/引用完整性、运营控制台 ops-console.html。RBAC 预设：OPS / PLANNER / CS / SUPERADMIN。鉴权：IP 白名单 + HMAC/API Key；生产强制开启。
+407|Heading 1|第八章 环境变量与配置矩阵（精要）
+430|List Bullet|元素反应、体力、词条、战令/月卡/签到、CoopRoom、队伍、助战、家园；P6：垂直移动/DoT Zone/引导链/CHAOS 诅咒/精通反应/装备强化/Boss 贡献分档与 MVP；P7：完美闪避/弹反与子弹时间、钩锁/载具、可破坏环境、捕捉驯服骑乘、多人协同解谜、编年史 global_flag、家园种植烹饪、空中冲刺/壁走、突破本、战斗指令重播。；P9 已接入门面与 Internal API（见 5.2.7）；P10 已接入（见 
+431|List Bullet|抽卡、挑战、肉鸽、匹配分片、排行榜、邮件附件幂等发奖；P8：公会（创建/科技/远征分档/聊天 roster/会长转让）与深渊（12 间连打/星级/里程碑邮件/半月重置）；P9：命座机制覆盖、圣遗物定向锁定、专武特效触发、下落重击、水下物理、稀有精英、跟随采集、家园守卫偷菜、幻影引导、韧性/预输入、区域觉醒、世界之核；P10：生态状态机与亲密度协助、钩锁物理/载具战斗/毁崖攀爬攻击、地貌元素连锁与弹道偏转、服务器纪元与阵营拉锯、野外攻城与
+433|List Bullet|P13 体验优化：探索罗盘/地图标记/探索度世界影响、区域滑索与攀爬歇脚、通用探索套件去角色绑定、生态叙事与环境叙事、探索正向反馈、战斗简化模式、资源自动化/灵活日常/智能养成；已接入 OpenWorldGameplayFacade、InternalOpenWorldController、MovementAdmissionService。
+434|List Bullet|P14 体验纵深补齐：客户端预测与软回滚、动量继承、确定性破坏、探索活力/神瞳共鸣、野外营地/幻影借用/助战印记、多端辅助/连招宏、周词缀与命运残响；七大体验短板加固：MoveTrajectoryValidator、ClimbRestPoint RestPointBuff、RegionHeatService、echoProbe、DOT_EXIT_BUFFER、ICE_SPREAD_CRV、FightContributionPool、Ph
+436|List Bullet|智能 NPC（短期+长期记忆）/ AI 顾问+推荐+客服+战术 / Boss BT+DDA / Admin AI 草稿+自动校验+流失干预 / ai-service 8995。
+493|List Number|POST /move/admit moveFlags=MID_AIR_DASH 扣 20 体力；WALL_RUN 校验法线夹角并回写 wallNormal。
+521|List Number|命中下发 HitStop + 镜头震动；普攻先播 PRE_IMPACT，校验失败客户端 ROLLBACK。小队 AI 盾墙齐射，旁侧 AI 独占投掷巨石。
+523|Heading 2|11.14 探索罗盘到智能养成（P13）
+524|Normal|探索度达 70% → GET /compass/status 解锁 → POST /compass/probe 标记剩余宝箱/挑战；GET /map/markers 查看已收集/未收集；GET /explore/world-impact 触发路径/NPC/事件。
+529|Normal|触发角色传说 POST /story/instance/start → MsgId 2450 强制对话 UI；choose 选项回写个人编年史与 NPC 好感；任务期区域潮汐锁定；complete 解锁区域并领奖。
+532|Normal|踩弹射蘑菇 POST /move/admit movementType=BOUNCE：成功后格子进入冷却；再踩返回 TERRAIN_EXHAUSTED，播枯萎且不扣体力。
+534|Heading 2|11.15 客户端预测到命运残响（P14）
+554|Normal|内部 HTTP 前缀 /internal/**：战斗 start/action/end、活动世界事件、签到、背包 resin、大厅 coop/party/assist/home、商城 pass/对账、抽卡 probability/audit、场景 open-world、Admin /admin/** 等。命令型可为 Protobuf 流；Port 型多为 JSON；大世界 P7：reaction/grapple/vehicle/muta
+582|Heading 2|Q14：P14 客户端预测/多端辅助/探索活力/肉鸽词缀如何联调？
+583|Normal|答：场景侧 InternalOpenWorldController：/predict/action/start|reconcile、/combat/assist/device|soft-lock、/build/macro/save|trigger、/mutability/deterministic、/explore/vitality/daily|complete、/explore/oculi/resonance、/camp/establ
+586|Normal|场景侧走 InternalOpenWorldController：/team/resonance/refresh、/story/instance/*、/handbook/*、/squad/quick-mark、/move/admit（BOUNCE+regionId/terrainCell）、/rogue/start|settle。回归套件：OpenWorldP11BusinessFlowTest（scene API 全链路）、OpenW
+587|Normal|【P11 队伍共鸣 / 传说状态机 / 图鉴负反馈 / 指挥标记 / 地形冷却 / 肉鸽命运卡】TeamCompositionService：4 人队元素组合计算 ElementResonance（双火+25%攻击、双水+生命上限等），以战斗期 WorldBuff 注入，POST .../team/resonance/refresh 返回 resonance_id 与 attribute_modifiers；StoryStateMach
+592|Normal|MyMmorpg 用现代 Java 技术栈，搭出一套既适合学习演示、又具备微服务扩展潜力的 MMORPG 服务端。它覆盖玩家入口、大世界（含 P5～P14：探索纵深、客户端预测软回滚、动量继承、确定性破坏、探索活力、野外营地、周词缀与命运残响等）、战斗（含 P8 深渊高难回廊）、社交（含 P8 公会、P9 家园博弈、P14 幻影借用与助战印记）、任务、活动、抽卡、商城支付、后台运营、安全与工程化测试等板块，并吸收二游常见体验（元素反应、
+596|Normal|player 8989；scene 8981；chat 8982；bag 8983；skill 8984；admin 8985；hall 8986；quest 8987；matchmaking 8988；shop 8990；battle 8991（含深渊 abyss）；activity 8992；update 8993；gacha 8994；ai-service 8995（AI 推理网关）；guild-service 8998；gate
+598|Normal|GAME_SCENE/CHAT/BAG/SKILL/HALL/QUEST/MATCH/BATTLE/ACTIVITY/UPDATE/SHOP/GACHA_REMOTE_ENABLED=true；GAME_AI_REMOTE_ENABLED=true（ai-service:8995）；GAME_AI_REMOTE_ENABLED=true（ai-service:8995）；GAME_AI_REMOTE_ENABLED=true（ai-se
+600|List Bullet|生成日期：2026年08月24日（P14 体验纵深补齐 + 七大体验短板加固；P13 体验优化；P12 性能加固；P10/P11 原地增补）

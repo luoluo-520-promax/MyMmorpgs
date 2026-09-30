@@ -34,6 +34,7 @@ import org.slf4j.Logger; // SLF4J 日志接口
 import org.slf4j.LoggerFactory; // 按类名创建 SLF4J Logger，输出业务/运维日志
 import org.springframework.boot.CommandLineRunner; // 容器就绪后执行 run，晚于 JPA ddl/schema
 import org.springframework.context.annotation.Profile; // !test 排除单元测试污染 H2
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder; // BCrypt 哈希 testuser 密码
 import org.springframework.stereotype.Component; // 注册 Spring Bean，供容器注入或启动扫描
 import java.math.BigDecimal; // skill castTime 精度字段
@@ -43,7 +44,7 @@ import java.time.Instant; // player_skill.learn_time UTC
  */
 
 @Component // 单例，启动时自动 run
-@Profile("!test") // @DataJpaTest 等 test profile 不加载，避免与 @Sql 冲突
+@Profile("dev")
 
 public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类型定义
     private static final Logger log = LoggerFactory.getLogger(DevDataLoader.class); // SLF4J Logger，记录 dev 种子写入进度
@@ -58,6 +59,7 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
     private final PlayerBagItemRepository playerBagItemRepository; // JPA 仓储，dev 种子写入与 count 判空
     private final ActivityRepository activityRepository; // JPA 仓储，dev 种子写入与 count 判空
     private final PasswordEncoder passwordEncoder; // BCrypt 编码器，哈希 testuser 密码
+    private final JdbcTemplate jdbcTemplate; // 固定 ID 皮肤卡种子（绕过 IDENTITY）
     public DevDataLoader( // Spring 构造注入各 JPA 仓储与 PasswordEncoder，供 run 写 dev 种子
             AccountRepository accountRepository, // 联调账号 testuser 写入与 count 判空
             PlayerRepository playerRepository, // dev 角色星穹列车员/无名侠 写入
@@ -69,7 +71,8 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
             ItemConfigRepository itemConfigRepository, // 经验药水/铁剑 item_config 写入
             PlayerBagItemRepository playerBagItemRepository, // 首个角色背包槽 0/1 写入
             ActivityRepository activityRepository, // 首充/签到 activity 写入
-            PasswordEncoder passwordEncoder) { // BCrypt 哈希 testuser 密码 123456
+            PasswordEncoder passwordEncoder,
+            JdbcTemplate jdbcTemplate) { // BCrypt 哈希 testuser 密码 123456
         this.accountRepository = accountRepository; // 构造器注入 accountRepository
         this.playerRepository = playerRepository; // 构造器注入 playerRepository
         this.mapConfigRepository = mapConfigRepository; // 构造器注入 mapConfigRepository
@@ -81,6 +84,7 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
         this.playerBagItemRepository = playerBagItemRepository; // 构造器注入 playerBagItemRepository
         this.activityRepository = activityRepository; // 构造器注入 activityRepository
         this.passwordEncoder = passwordEncoder; // 构造器注入 passwordEncoder
+        this.jdbcTemplate = jdbcTemplate;
     } // method 方法体结束
 
     @Override // 实现接口/父类方法
@@ -96,12 +100,23 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
             p1.setName("星穹列车员"); // dev 主角色名，Lv35 VIP
             p1.setLevel(35); // 高等级便于测功能解锁与战斗
             p1.setVipRight(1); // VIP 标记，FunctionService 可扩展校验
+            p1.setStrength(40);
+            p1.setAgility(30);
+            p1.setIntelligence(25);
+            p1.setTalentPoints(5);
+            p1.setGold(1000L);
+            p1.recalcPowerScore();
             playerRepository.save(p1); // 持久化 dev 角色行
             Player p2 = new Player(); // dev 种子：副角色无名侠 Lv10 同账号
             p2.setAccountId(account.getId()); // 同账号多角色
             p2.setName("无名侠"); // dev 副角色名，同账号多角色
             p2.setLevel(10); // 低等级副角色，测等级门槛
             p2.setVipRight(0); // 非 VIP 副角色
+            p2.setStrength(15);
+            p2.setAgility(12);
+            p2.setIntelligence(10);
+            p2.setTalentPoints(2);
+            p2.recalcPowerScore();
             playerRepository.save(p2); // 持久化 dev 角色行
             log.info("已写入示例账号 testuser / 123456，角色与接口文档示例一致"); // dev 种子：账号与双角色写入完成
         } // DevDataLoader 类体结束
@@ -239,10 +254,13 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
             sword.setDescription("一把普通的铁剑"); // 铁剑描述
             sword.setPrice(100); // 商店价 100
             sword.setSellPrice(50); // 出售价 50
-            sword.setEffectParams(null); // 装备无 effect_params
+            sword.setEffectParams("slot=1;atk=15;def=2"); // 武器槽1，攻击+15 防御+2
             itemConfigRepository.save(sword); // 持久化 dev 道具模板
             log.info("已写入示例 item_config（经验药水、铁剑，与接口文档示例一致）"); // dev 种子：两道具模板写入完成
         } // 编译单元结束
+        // --- 皮肤解锁卡：固定 ID 对齐 SkinConfigs.json / 商城 520001 ---
+        ensureSkinUnlockItem(71002, "旅人披风解锁卡", 1002);
+        ensureSkinUnlockItem(71003, "星穹礼服解锁卡", 1003);
         // --- 背包：首个角色槽位 0/1 放药水与铁剑 ---
         if (playerBagItemRepository.count() == 0 && playerRepository.count() > 0) { // 有角色且无背包行时预置槽位
             Player first = playerRepository.findAll().iterator().next(); // 取首个 dev 角色（星穹列车员）
@@ -307,4 +325,16 @@ public class DevDataLoader implements CommandLineRunner { // DevDataLoader 类�
             log.info("已写入示例 activity（首充、签到），档位道具取自 item_config"); // 记录 dev 种子/路由注册/Netty 启停日志
         } // 编译单元结束
     } // 编译单元结束
+
+    /** 写入固定 ID 的皮肤解锁卡（对齐 SkinConfig.itemId）。 */
+    private void ensureSkinUnlockItem(int itemId, String name, int skinId) {
+        if (itemConfigRepository.existsById(itemId)) {
+            return;
+        }
+        jdbcTemplate.update(
+                "INSERT INTO item_config (id, name, kind, stack_limit, level_required, description, price, sell_price, effect_params) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                itemId, name, 3, 1, 1, "使用后解锁皮肤", 0, 0, "{\"skinId\":" + skinId + "}");
+        log.info("已写入皮肤解锁卡 itemId={} skinId={}", itemId, skinId);
+    }
 } // 编译单元结束

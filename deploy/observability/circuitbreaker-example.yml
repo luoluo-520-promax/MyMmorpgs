@@ -1,0 +1,51 @@
+# Resilience4j circuit breaker 示例（scene / battle Feign）
+# 复制到各服务 application.yml，或 spring.config.import 本文件。
+# 依赖：spring-cloud-starter-circuitbreaker-resilience4j
+# 与现有 Feign FallbackFactory（SceneCommandClient / BattleCommandClient）配合使用。
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - feign.FeignException
+    instances:
+      # Feign name / contextId 需与 @FeignClient 一致
+      SceneCommandClient:
+        baseConfig: default
+        failureRateThreshold: 40
+        waitDurationInOpenState: 15s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 30
+      BattleCommandClient:
+        baseConfig: default
+        failureRateThreshold: 50
+        waitDurationInOpenState: 20s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slidingWindowSize: 40
+        # 战斗链路更保守：半开试探少、打开等待更长，避免故障抖动
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+    instances:
+      SceneCommandClient:
+        timeoutDuration: 2s
+      BattleCommandClient:
+        timeoutDuration: 5s
+
+spring:
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true

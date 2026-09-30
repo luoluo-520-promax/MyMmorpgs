@@ -1,0 +1,21 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    # 仅限本地开发；生产必须通过环境变量注入 MYSQL_PASSWORD
+    password: ${MYSQL_PASSWORD:123456}
+
+admin:
+  http:
+    auth-enabled: false
+    hmac-secret: ${ADMIN_HMAC_SECRET:dev-admin-hmac-secret}
+    api-key: ${ADMIN_API_KEY:dev-admin-api-key}
+  ai:
+    enabled: ${ADMIN_AI_ENABLED:false}
+    api-key: ${ADMIN_AI_API_KEY:}
+
+game:
+  internal-api:
+    enabled: false
+    secret: ${INTERNAL_API_SECRET:dev-internal-api-secret}

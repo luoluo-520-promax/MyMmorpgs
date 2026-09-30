@@ -1,0 +1,56 @@
+groups:
+  - name: mmorpg-p0
+    rules:
+      - alert: ShopPayVerifyFailures
+        expr: increase(mmorpg_shop_pay_verify_failures_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "商城支付验签失败增多"
+          description: "近 5 分钟验签失败超过 5 次，请检查渠道密钥与回调。"
+
+      - alert: ShopOrderPaidStuck
+        expr: increase(mmorpg_shop_orders_fulfilled_total[30m]) == 0 and increase(mmorpg_shop_pay_verify_failures_total[30m]) > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "支付验签有失败且长时间无履约成功"
+          description: "可能卡在 PAID 或发货失败，请查 shop_order 与 bag grant。"
+
+      - alert: ShopReconcileMismatch
+        expr: mmorpg_shop_reconcile_mismatch > 5 or increase(mmorpg_shop_reconcile_alerts_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "商城渠道对账差异超阈值"
+          description: "自动对账发现渠道/本地差异，请查 AutoReconcileScheduler 日志与 shop_order。"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "目标实例不可达 {{ $labels.job }}"
+          description: "Prometheus 抓取失败，检查进程与 Actuator 暴露。"
+
+      - alert: HighJvmMemory
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "堆内存使用率 > 90%"
+          description: "job={{ $labels.job }} instance={{ $labels.instance }}"
+
+      - alert: MqOutboxFailedBacklog
+        expr: mmorpg_mq_outbox_failed > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MQ Outbox 失败积压"
+          description: "FAILED 行超过 20，检查 RocketMQ 与投递重试。"

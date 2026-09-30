@@ -20,7 +20,8 @@ public class ChatPortConfiguration { // 为聊天服务注入跨模块端口适�
      * 注册玩家缓存端口 NoOp 实现：独立 chat-service 无 player DB 时占位。
      * 生产环境应替换为 Feign 调用 player-service 或 Redis 缓存实现。
      */
-    @Bean // 注册 PlayerCachePort 单例，ChatService 构造器注入
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerCachePort playerCachePort() { // 容器启动时创建，供 ChatService 查发送者 Player 与私聊目标存在性
         return new NoOpPlayerCachePort(); // 所有 findById 返回 null，私聊/世界频道在独立部署下会 PLAYER_NOT_FOUND
     }
@@ -29,7 +30,8 @@ public class ChatPortConfiguration { // 为聊天服务注入跨模块端口适�
      * 注册玩家通知端口 NoOp 实现：独立 chat-service 无 WebSocket 网关时占位。
      * 生产环境应替换为 Redis Pub/Sub 或 Feign 推送到 gateway/player-service。
      */
-    @Bean // 注册 PlayerNotificationPort 单例，ChatService 构造器注入
+    @Bean
+    @ConditionalOnProperty(name = "game.port.remote.enabled", havingValue = "false", matchIfMissing = true)
     PlayerNotificationPort playerNotificationPort() { // 容器启动时创建，供 ChatService 推送 603 与判断在线
         return new NoOpPlayerNotificationPort(); // send/broadcast 空操作，isOnline 恒 false，私聊会 TARGET_OFFLINE
     }

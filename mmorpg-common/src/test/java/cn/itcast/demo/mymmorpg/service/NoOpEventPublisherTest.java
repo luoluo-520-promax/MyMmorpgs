@@ -115,4 +115,17 @@ public class NoOpEventPublisherTest {
 
         log.info("[测试断言] 场景=NoOp技能事件 | 期望=两次调用均不抛异常");
     }
+
+    @Test
+    public void noOpSocialEventPublisher_safeInvoke() {
+        SocialEventPublisher publisher = new NoOpSocialEventPublisher();
+        assertThatCode(() -> {
+            publisher.publishFriendOnline(1L);
+            publisher.publishPartyFormed(1L, "pty-1", 2);
+            publisher.publishAssistSettled(1L, 2L, true);
+            publisher.publishHomeVisited(1L, 2L);
+            publisher.publishCoopInteraction("coop-1", "LIKE", 1L, 2L);
+            publisher.publish("FRIEND_ADDED", 1L, 2L, "");
+        }).doesNotThrowAnyException();
+    }
 }

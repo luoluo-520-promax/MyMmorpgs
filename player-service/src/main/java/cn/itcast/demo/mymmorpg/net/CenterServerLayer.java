@@ -11,12 +11,12 @@ import cn.itcast.demo.mymmorpg.net.ServerLayer; // 进程角色 init 契约
 import org.slf4j.Logger; // SLF4J 日志接口
 import org.slf4j.LoggerFactory; // 按类名创建 SLF4J Logger
 /**
- * 中心服（server.type=CENTRE）：维护 FIGHT/GAME 节点注册表，响应 Rpc_G2C_FetchFightServerNodes 等跨服 RPC。
+ * 中心服（server.type=CENTRE）：维护 FIGHT/GAME/SCENE 节点注册表，响应跨服 RPC（战斗节点目录、跨场景路由）。
  */
 public class CenterServerLayer implements ServerLayer { // server.type=CENTRE 时 ServerStartup 注册
     private static final Logger log = LoggerFactory.getLogger(CenterServerLayer.class); // 记录中心服 init 日志
     @Override // 实现接口/父类方法
     public void init() { // ServerStartup.serverLayer Bean 创建后立即调用
-        log.info("CenterServerLayer init"); // 中心服节点注册表、RPC 路由等扩展点占位
-    } // 编译单元结束
-} // 编译单元结束
+        log.info("CenterServerLayer init: fight/scene node registry ready for cross-zone routing");
+    }
+}

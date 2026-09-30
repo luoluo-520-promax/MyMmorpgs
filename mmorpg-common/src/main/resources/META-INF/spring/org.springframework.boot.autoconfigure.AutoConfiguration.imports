@@ -1,1 +1,3 @@
-cn.itcast.demo.mymmorpg.config.RedisPingHealthAutoConfiguration
+cn.itcast.demo.mymmorpg.config.InternalApiAuthAutoConfiguration
+cn.itcast.demo.mymmorpg.config.RemotePortAutoConfiguration
+cn.itcast.demo.mymmorpg.config.SessionCryptoConfiguration

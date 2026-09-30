@@ -1,0 +1,36 @@
+{
+  "seasonId": "2026-08-a",
+  "blessing": {
+    "type": "CHARGE_ATTACK",
+    "bonus": 0.3
+  },
+  "floors": [
+    {
+      "floorIndex": 1,
+      "chambers": [
+        {"chamberIndex": 1, "monsterGroup": "abyss_f1_c1", "timeLimitSec": 180},
+        {"chamberIndex": 2, "monsterGroup": "abyss_f1_c2", "timeLimitSec": 180},
+        {"chamberIndex": 3, "monsterGroup": "abyss_f1_c3", "timeLimitSec": 180},
+        {"chamberIndex": 4, "monsterGroup": "abyss_f1_c4", "timeLimitSec": 180}
+      ]
+    },
+    {
+      "floorIndex": 2,
+      "chambers": [
+        {"chamberIndex": 1, "monsterGroup": "abyss_f2_c1", "timeLimitSec": 180},
+        {"chamberIndex": 2, "monsterGroup": "abyss_f2_c2", "timeLimitSec": 180},
+        {"chamberIndex": 3, "monsterGroup": "abyss_f2_c3", "timeLimitSec": 180},
+        {"chamberIndex": 4, "monsterGroup": "abyss_f2_c4", "timeLimitSec": 180}
+      ]
+    },
+    {
+      "floorIndex": 3,
+      "chambers": [
+        {"chamberIndex": 1, "monsterGroup": "abyss_f3_c1", "timeLimitSec": 180},
+        {"chamberIndex": 2, "monsterGroup": "abyss_f3_c2", "timeLimitSec": 180},
+        {"chamberIndex": 3, "monsterGroup": "abyss_f3_c3", "timeLimitSec": 180},
+        {"chamberIndex": 4, "monsterGroup": "abyss_f3_c4", "timeLimitSec": 180}
+      ]
+    }
+  ]
+}

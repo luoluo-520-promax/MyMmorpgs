@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: matchmaking-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_PLAYER:player_db}?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8988
+
+game:
+  match:
+    # >1 时按 playerId 分片队列/锁，降低单 mode 热点；1 保持历史 key
+    queue-shards: ${GAME_MATCH_QUEUE_SHARDS:1}
+    # shards>1 时合并各分片配对（按 shard 序加锁）
+    cross-shard-enabled: ${GAME_MATCH_CROSS_SHARD:true}
+    # 按战力区间确定性路由，优先同分片配对
+    route-by-power-band: ${GAME_MATCH_ROUTE_BY_POWER:true}
+    # 本分片最长等待后才跨分片广播（毫秒）
+    cross-shard-wait-ms: ${GAME_MATCH_CROSS_SHARD_WAIT_MS:30000}
+    # 匹配心跳 TTL；超时视为幽灵玩家
+    heartbeat-ttl-sec: ${GAME_MATCH_HEARTBEAT_TTL_SEC:30}
+    # 匹配等待超时（秒），超时自动弹出
+    queue-timeout-sec: ${GAME_MATCH_QUEUE_TIMEOUT_SEC:300}
+    janitor-interval-ms: ${GAME_MATCH_JANITOR_INTERVAL_MS:5000}
+  internal-api:
+    enabled: ${GAME_INTERNAL_API_ENABLED:true}
+    secret: ${INTERNAL_API_SECRET:}
+  port:
+    remote:
+      enabled: ${GAME_PORT_REMOTE_ENABLED:false}
+      player-service-url: ${PLAYER_SERVICE_URL:http://127.0.0.1:8989}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

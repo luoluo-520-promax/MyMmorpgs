@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+game:
+  internal-api:
+    enabled: true
+    secret: ${INTERNAL_API_SECRET}
+  port:
+    remote:
+      enabled: true
+
+shop:
+  payment:
+    production-verify-enabled: ${SHOP_PAYMENT_PRODUCTION_VERIFY:true}
+    mock-enabled: false
+    channel-secrets:
+      wechat: ${SHOP_PAYMENT_CHANNEL_SECRET_WECHAT:}
+      alipay: ${SHOP_PAYMENT_CHANNEL_SECRET_ALIPAY:}
+      app-store: ${SHOP_PAYMENT_CHANNEL_SECRET_APP_STORE:}
+      google-play: ${SHOP_PAYMENT_CHANNEL_SECRET_GOOGLE_PLAY:}
